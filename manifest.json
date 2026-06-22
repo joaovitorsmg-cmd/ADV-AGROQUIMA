@@ -1,6 +1,6 @@
 {
-  "name": "Agroquima - Gestão de Despesas",
-  "short_name": "Agroquima",
+  "name": "ADV AGROQUIMA - Gestão de Despesas",
+  "short_name": "ADV AGROQUIMA",
   "description": "Registro de despesas e atividades de viagem Agroquima",
   "start_url": "./index.html",
   "display": "standalone",
