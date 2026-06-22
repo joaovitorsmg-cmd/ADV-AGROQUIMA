@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0A2E6E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>AgroWA</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root {
+  --azul: #0A2E6E;
+  --azul-medio: #1448A8;
+  --azul-claro: #2563EB;
+  --azul-bg: #EEF3FC;
+  --verde: #16A34A;
+  --vermelho: #DC2626;
+  --amarelo: #D97706;
+  --cinza: #6B7280;
+  --cinza-claro: #F3F4F6;
+  --branco: #FFFFFF;
+  --texto: #111827;
+  --texto-suave: #6B7280;
+  --borda: #E5E7EB;
+  --sombra: 0 1px 4px rgba(0,0,0,0.10);
+  --radius: 14px;
+  --radius-sm: 8px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--cinza-claro);
+  color: var(--texto);
+  min-height: 100vh;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* ─── TOPO ─── */
+.header {
+  background: var(--azul);
+  color: var(--branco);
+  padding: calc(var(--safe-top) + 16px) 20px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-row { display: flex; align-items: center; justify-content: space-between; }
+.header h1 { font-size: 18px; font-weight: 700; letter-spacing: 0.3px; }
+.header-sub { font-size: 12px; opacity: 0.75; margin-top: 2px; }
+.btn-icon { background: rgba(255,255,255,0.12); border: none; color: white; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; }
+
+/* ─── HERO ADV ─── */
+.hero-adv {
+  background: linear-gradient(135deg, var(--azul) 0%, var(--azul-medio) 100%);
+  color: white;
+  padding: 20px 20px 28px;
+}
+.hero-label { font-size: 11px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.8px; }
+.hero-adv-num { font-size: 13px; opacity: 0.85; margin: 4px 0 2px; }
+.hero-valor { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; }
+.hero-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+.hero-card { background: rgba(255,255,255,0.12); border-radius: var(--radius-sm); padding: 12px 14px; }
+.hero-card-label { font-size: 11px; opacity: 0.75; display: flex; align-items: center; gap: 5px; }
+.hero-card-valor { font-size: 20px; font-weight: 700; margin-top: 4px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.dot-verde { background: #4ADE80; }
+.dot-vermelho { background: #F87171; }
+
+/* ─── SEÇÃO ─── */
+.section { padding: 0 16px; margin-top: 20px; }
+.section-title { font-size: 13px; font-weight: 700; color: var(--texto); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* ─── CARDS ─── */
+.card { background: var(--branco); border-radius: var(--radius); box-shadow: var(--sombra); overflow: hidden; }
+.card + .card { margin-top: 10px; }
+.card-header { padding: 14px 16px 0; display: flex; justify-content: space-between; align-items: flex-start; }
+.card-titulo { font-size: 15px; font-weight: 700; }
+.card-id { font-size: 10px; color: var(--texto-suave); margin-top: 2px; }
+.card-body { padding: 10px 16px 14px; }
+.card-row { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+.card-tipo { font-size: 13px; color: var(--azul-claro); font-weight: 600; }
+.card-info { display: flex; gap: 12px; font-size: 12px; color: var(--texto-suave); margin-top: 8px; border-top: 1px solid var(--borda); padding-top: 10px; }
+.card-info span { display: flex; align-items: center; gap: 4px; }
+.card-valor { font-size: 16px; font-weight: 700; color: var(--texto); }
+
+/* ─── BADGE STATUS ─── */
+.badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.badge-analise { background: #FEF3C7; color: #92400E; }
+.badge-aprovada { background: #DCFCE7; color: #14532D; }
+.badge-reprovada { background: #FEE2E2; color: #7F1D1D; }
+.badge-pendente { background: #EDE9FE; color: #4C1D95; }
+.badge-sincronizando { background: #DBEAFE; color: #1E40AF; }
+
+/* ─── BOTÃO NOVA DESPESA ─── */
+.btn-nova { 
+  background: var(--branco); border-radius: var(--radius); box-shadow: var(--sombra);
+  padding: 18px 20px; display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; border: none; width: 100%; text-align: left;
+  transition: background 0.15s;
+}
+.btn-nova:active { background: var(--azul-bg); }
+.btn-nova-texto { font-size: 16px; font-weight: 600; color: var(--texto); }
+.btn-nova-icone { width: 40px; height: 40px; background: var(--azul-bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--azul-claro); }
+
+/* ─── BOTTOM NAV ─── */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px;
+  background: var(--branco); border-top: 1px solid var(--borda);
+  display: flex; padding-bottom: var(--safe-bottom);
+  z-index: 200; box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  padding: 10px 0; cursor: pointer; border: none; background: none;
+  font-size: 10px; color: var(--cinza); gap: 3px; transition: color 0.15s;
+}
+.nav-item.ativo { color: var(--azul-claro); }
+.nav-item svg { width: 22px; height: 22px; }
+.nav-label { font-weight: 500; }
+
+/* ─── CONTEÚDO COM PADDING DO NAV ─── */
+.conteudo { padding-bottom: calc(70px + var(--safe-bottom)); }
+
+/* ─── SYNC BANNER ─── */
+.sync-banner {
+  background: var(--azul-claro); color: white; padding: 8px 16px;
+  font-size: 12px; display: flex; align-items: center; gap: 8px;
+  display: none;
+}
+.sync-banner.visivel { display: flex; }
+.spin { animation: spin 1s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── OFFLINE BADGE ─── */
+.offline-badge {
+  background: #FEF3C7; color: #92400E; font-size: 11px; font-weight: 600;
+  padding: 4px 12px; border-radius: 20px; display: none; align-items: center; gap: 5px;
+}
+.offline-badge.visivel { display: flex; }
+
+/* ─── FILTROS BAR ─── */
+.filtros-bar { display: flex; justify-content: space-between; align-items: center; padding: 0 16px; margin-top: 16px; }
+.filtros-btn { background: var(--cinza-claro); border: none; border-radius: 20px; padding: 7px 14px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--texto); font-weight: 500; }
+
+/* ─── TELAS / PAGES ─── */
+.page { display: none; }
+.page.ativa { display: block; }
+
+/* ─── LOGIN ─── */
+.login-container {
+  min-height: 100vh; background: var(--azul);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 40px 28px;
+}
+.login-logo { font-size: 48px; margin-bottom: 8px; }
+.login-titulo { color: white; font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+.login-sub { color: rgba(255,255,255,0.65); font-size: 14px; margin-top: 4px; margin-bottom: 36px; }
+.login-card { background: white; border-radius: 20px; padding: 28px 24px; width: 100%; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+.login-tabs { display: flex; gap: 0; margin-bottom: 24px; background: var(--cinza-claro); border-radius: var(--radius-sm); padding: 4px; }
+.login-tab { flex: 1; padding: 8px; text-align: center; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; border: none; background: none; color: var(--cinza); transition: all 0.2s; }
+.login-tab.ativo { background: var(--azul); color: white; }
+.form-group { margin-bottom: 16px; }
+.form-label { font-size: 12px; font-weight: 600; color: var(--cinza); margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.4px; }
+.form-input {
+  width: 100%; padding: 13px 14px; border: 1.5px solid var(--borda); border-radius: var(--radius-sm);
+  font-size: 15px; color: var(--texto); background: var(--branco); outline: none;
+  transition: border-color 0.2s;
+}
+.form-input:focus { border-color: var(--azul-claro); }
+.btn-primario {
+  width: 100%; padding: 14px; background: var(--azul); color: white; border: none;
+  border-radius: 30px; font-size: 15px; font-weight: 700; cursor: pointer;
+  transition: background 0.2s; letter-spacing: 0.3px;
+}
+.btn-primario:active { background: var(--azul-medio); }
+.btn-primario:disabled { background: var(--cinza); cursor: not-allowed; }
+
+/* ─── MODAL / DRAWER ─── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300;
+  display: none; align-items: flex-end;
+}
+.modal-overlay.aberto { display: flex; }
+.modal {
+  background: white; border-radius: 24px 24px 0 0; width: 100%; max-width: 480px;
+  margin: 0 auto; max-height: 92vh; overflow-y: auto;
+  padding: 0 0 calc(20px + var(--safe-bottom));
+}
+.modal-handle { width: 40px; height: 4px; background: var(--borda); border-radius: 2px; margin: 12px auto 0; }
+.modal-header { padding: 16px 20px 0; display: flex; align-items: center; gap: 10px; }
+.modal-titulo { font-size: 18px; font-weight: 700; flex: 1; }
+.modal-body { padding: 20px; }
+.modal-footer { padding: 0 20px; }
+
+/* ─── STEPS ─── */
+.steps { display: flex; gap: 0; margin-bottom: 24px; }
+.step { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; }
+.step::after { content: ''; position: absolute; top: 16px; left: 50%; width: 100%; height: 2px; background: var(--borda); z-index: -1; }
+.step:last-child::after { display: none; }
+.step-num { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--borda); background: white; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--cinza); z-index: 1; }
+.step.ativo .step-num { background: var(--azul-claro); border-color: var(--azul-claro); color: white; }
+.step.completo .step-num { background: var(--verde); border-color: var(--verde); color: white; }
+.step-label { font-size: 10px; color: var(--cinza); font-weight: 500; }
+.step.ativo .step-label { color: var(--azul-claro); font-weight: 700; }
+
+/* ─── SELECT CUSTOMIZADO ─── */
+.select-wrapper { position: relative; }
+.select-wrapper select {
+  width: 100%; padding: 13px 40px 13px 14px; border: 1.5px solid var(--borda);
+  border-radius: var(--radius-sm); font-size: 15px; color: var(--texto); background: white;
+  appearance: none; outline: none; cursor: pointer;
+}
+.select-wrapper::after {
+  content: '▾'; position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  color: var(--cinza); pointer-events: none; font-size: 14px;
+}
+.select-wrapper select:focus { border-color: var(--azul-claro); }
+
+/* ─── AUTOCOMPLETE ─── */
+.autocomplete-wrapper { position: relative; }
+.autocomplete-input { width: 100%; }
+.autocomplete-list {
+  position: absolute; top: 100%; left: 0; right: 0; background: white;
+  border: 1.5px solid var(--azul-claro); border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  max-height: 200px; overflow-y: auto; z-index: 400; box-shadow: var(--sombra);
+}
+.autocomplete-item { padding: 11px 14px; font-size: 14px; cursor: pointer; border-bottom: 1px solid var(--borda); }
+.autocomplete-item:hover, .autocomplete-item:active { background: var(--azul-bg); color: var(--azul-claro); }
+.autocomplete-item:last-child { border-bottom: none; }
+
+/* ─── UPLOAD NF ─── */
+.upload-area {
+  border: 2px dashed var(--borda); border-radius: var(--radius);
+  padding: 28px 20px; text-align: center; cursor: pointer; transition: border-color 0.2s;
+}
+.upload-area:active, .upload-area.com-arquivo { border-color: var(--azul-claro); background: var(--azul-bg); }
+.upload-icon { font-size: 28px; margin-bottom: 8px; }
+.upload-txt { font-size: 14px; color: var(--cinza); }
+.upload-btn-txt { color: var(--azul-claro); font-weight: 600; }
+.upload-limite { font-size: 11px; color: var(--texto-suave); margin-top: 4px; }
+
+/* ─── CHECKBOX ─── */
+.checkbox-row { display: flex; align-items: flex-start; gap: 10px; }
+.checkbox-row input[type=checkbox] { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--azul-claro); flex-shrink: 0; }
+.checkbox-row label { font-size: 13px; color: var(--texto-suave); line-height: 1.4; }
+
+/* ─── AGENDA ─── */
+.calendario { background: white; border-radius: var(--radius); box-shadow: var(--sombra); padding: 16px; }
+.cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.cal-mes { font-size: 15px; font-weight: 700; }
+.cal-nav { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--azul-claro); padding: 4px 8px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-dia-label { text-align: center; font-size: 11px; font-weight: 600; color: var(--cinza); padding: 4px 0; }
+.cal-dia { text-align: center; padding: 6px 2px; font-size: 13px; cursor: pointer; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; margin: 1px auto; }
+.cal-dia.hoje { background: var(--azul-claro); color: white; font-weight: 700; }
+.cal-dia.selecionado { background: var(--azul); color: white; font-weight: 700; }
+.cal-dia.tem-atividade::after { content: ''; display: block; width: 4px; height: 4px; background: var(--verde); border-radius: 50%; margin: 1px auto 0; }
+.cal-dia.outro-mes { color: var(--borda); }
+.cal-dia:empty { cursor: default; }
+
+/* ─── DASHBOARD GESTOR ─── */
+.kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.kpi { background: white; border-radius: var(--radius); padding: 16px; box-shadow: var(--sombra); }
+.kpi-valor { font-size: 24px; font-weight: 800; color: var(--azul); }
+.kpi-label { font-size: 11px; color: var(--cinza); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+.kpi.destaque { background: var(--azul); }
+.kpi.destaque .kpi-valor { color: white; }
+.kpi.destaque .kpi-label { color: rgba(255,255,255,0.7); }
+.kpi.alerta .kpi-valor { color: var(--vermelho); }
+
+/* ─── LISTA REPRESENTANTES ─── */
+.rep-item { background: white; border-radius: var(--radius); box-shadow: var(--sombra); padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+.rep-item + .rep-item { margin-top: 8px; }
+.rep-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--azul-bg); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: var(--azul-claro); flex-shrink: 0; }
+.rep-info { flex: 1; }
+.rep-nome { font-size: 14px; font-weight: 600; }
+.rep-detalhe { font-size: 12px; color: var(--cinza); margin-top: 2px; }
+.rep-valor { font-size: 15px; font-weight: 700; color: var(--azul); }
+
+/* ─── PERFIL ─── */
+.perfil-header { background: var(--azul); padding: calc(var(--safe-top) + 32px) 20px 32px; text-align: center; color: white; }
+.perfil-avatar { width: 72px; height: 72px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; margin: 0 auto 12px; }
+.perfil-nome { font-size: 18px; font-weight: 700; }
+.perfil-cargo { font-size: 13px; opacity: 0.75; margin-top: 4px; }
+.perfil-body { padding: 20px 16px; }
+.campo-perfil { background: white; border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 10px; box-shadow: var(--sombra); }
+.campo-perfil-label { font-size: 11px; color: var(--cinza); text-transform: uppercase; letter-spacing: 0.4px; }
+.campo-perfil-valor { font-size: 15px; font-weight: 500; margin-top: 4px; }
+.btn-sair { width: 100%; padding: 14px; background: var(--azul); color: white; border: none; border-radius: 30px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; }
+
+/* ─── EMPTY STATE ─── */
+.empty { text-align: center; padding: 48px 20px; }
+.empty-icon { font-size: 40px; margin-bottom: 12px; }
+.empty-titulo { font-size: 16px; font-weight: 700; color: var(--azul); }
+.empty-sub { font-size: 14px; color: var(--cinza); margin-top: 4px; }
+
+/* ─── TOAST ─── */
+.toast {
+  position: fixed; bottom: calc(80px + var(--safe-bottom)); left: 50%; transform: translateX(-50%);
+  background: var(--texto); color: white; padding: 10px 18px; border-radius: 20px;
+  font-size: 13px; font-weight: 500; z-index: 500; opacity: 0; transition: opacity 0.3s;
+  white-space: nowrap; max-width: 90vw;
+}
+.toast.visivel { opacity: 1; }
+
+/* ─── SEPARADOR ─── */
+.sep { height: 1px; background: var(--borda); margin: 16px 0; }
+.mt8 { margin-top: 8px; }
+.mt12 { margin-top: 12px; }
+.mt16 { margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════ LOGIN ═══════════════════════════════════ -->
+<div id="pLogin" class="page ativa" style="background:var(--azul);min-height:100vh;">
+  <div class="login-container">
+    <div class="login-logo">🌿</div>
+    <div class="login-titulo">AgroWA</div>
+    <div class="login-sub">Gestão de Viagens Agroquima</div>
+    <div class="login-card">
+      <div class="login-tabs">
+        <button class="login-tab ativo" onclick="setLoginTipo('externo')">Representante</button>
+        <button class="login-tab" onclick="setLoginTipo('estagio')">Estagiário</button>
+        <button class="login-tab" onclick="setLoginTipo('clt')">Colaborador</button>
+      </div>
+      <!-- Externo: CNPJ + Telefone -->
+      <div id="loginExterno">
+        <div class="form-group">
+          <label class="form-label">CNPJ</label>
+          <input class="form-input" id="lCnpj" type="tel" placeholder="00.000.000/0001-00" oninput="mascaraCNPJ(this)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Telefone</label>
+          <input class="form-input" id="lTelExt" type="tel" placeholder="(00) 00000-0000" oninput="mascaraTel(this)">
+        </div>
+      </div>
+      <!-- Estagiário: CPF + Telefone -->
+      <div id="loginEstagio" style="display:none">
+        <div class="form-group">
+          <label class="form-label">CPF</label>
+          <input class="form-input" id="lCpf" type="tel" placeholder="000.000.000-00" oninput="mascaraCPF(this)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Telefone</label>
+          <input class="form-input" id="lTelEst" type="tel" placeholder="(00) 00000-0000" oninput="mascaraTel(this)">
+        </div>
+      </div>
+      <!-- CLT: E-mail + Senha -->
+      <div id="loginClt" style="display:none">
+        <div class="form-group">
+          <label class="form-label">E-mail corporativo</label>
+          <input class="form-input" id="lEmail" type="email" placeholder="nome@agroquima.com.br">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Senha</label>
+          <input class="form-input" id="lSenha" type="password" placeholder="••••••••">
+        </div>
+      </div>
+      <button class="btn-primario" onclick="fazerLogin()" style="margin-top:8px">Entrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ APP WRAPPER ═══════════════════════════════════ -->
+<div id="appWrapper" style="display:none">
+
+  <!-- Sync Banner -->
+  <div class="sync-banner" id="syncBanner">
+    <span class="spin">⟳</span> Sincronizando lançamentos pendentes...
+  </div>
+
+  <!-- ─── TELA: FINANCEIRO (Representante/Estagiário/Promotor) ─── -->
+  <div id="pFinanceiro" class="page ativa conteudo">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-row">
+        <div>
+          <div class="header h1" style="font-size:20px;font-weight:800;color:white">AgroWA</div>
+          <div class="header-sub" id="hSubFinanceiro">Últimos 30 dias</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="offline-badge" id="offlineBadge">⚡ Offline</div>
+          <button class="btn-icon" onclick="irPara('pPerfil')">👤</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hero ADV -->
+    <div class="hero-adv">
+      <div class="hero-label">Adiantamento total</div>
+      <div class="hero-adv-num" id="advNum">#635482</div>
+      <div class="hero-valor" id="advTotal">R$ 1.000,00</div>
+      <div class="hero-cards">
+        <div class="hero-card">
+          <div class="hero-card-label"><span class="dot dot-verde"></span> Disponível</div>
+          <div class="hero-card-valor" id="advDisp">R$ 985,00</div>
+        </div>
+        <div class="hero-card">
+          <div class="hero-card-label"><span class="dot dot-vermelho"></span> Consumido</div>
+          <div class="hero-card-valor" id="advCons">R$ 15,00</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botão Nova Despesa -->
+    <div class="section mt12">
+      <button class="btn-nova" onclick="abrirModalDespesa()">
+        <span class="btn-nova-texto">Nova despesa</span>
+        <span class="btn-nova-icone">→</span>
+      </button>
+    </div>
+
+    <!-- Lista Despesas -->
+    <div class="filtros-bar">
+      <div class="section-title" style="margin:0">Últimas despesas</div>
+      <button class="filtros-btn" onclick="abrirFiltros()">⚙ Filtros</button>
+    </div>
+
+    <div class="section" id="listaDespesas"></div>
+    <div style="height:16px"></div>
+  </div>
+
+  <!-- ─── TELA: AGENDA ─── -->
+  <div id="pAgenda" class="page conteudo">
+    <div class="header">
+      <div class="header-row">
+        <div>
+          <div style="font-size:20px;font-weight:800;color:white">Agenda</div>
+          <div class="header-sub" id="hDataAgenda">22 de junho de 2026</div>
+        </div>
+        <button class="btn-icon" onclick="abrirModalAtividade()">+ Atividade</button>
+      </div>
+    </div>
+    <div class="section mt16">
+      <div class="calendario" id="calendarioEl"></div>
+    </div>
+    <div class="section mt16">
+      <div class="section-title">Atividades do dia</div>
+      <div id="listaAtividades"></div>
+    </div>
+  </div>
+
+  <!-- ─── TELA: DASHBOARD (Gerente/Aprovador) ─── -->
+  <div id="pDashboard" class="page conteudo">
+    <div class="header">
+      <div class="header-row">
+        <div>
+          <div style="font-size:20px;font-weight:800;color:white">Dashboard</div>
+          <div class="header-sub" id="hFilialGestor">Filial Rio Verde</div>
+        </div>
+        <button class="btn-icon" onclick="irPara('pPerfil')">👤</button>
+      </div>
+    </div>
+    <div class="section mt16">
+      <div class="kpi-grid">
+        <div class="kpi destaque"><div class="kpi-valor">15</div><div class="kpi-label">ADVs Abertos</div></div>
+        <div class="kpi alerta"><div class="kpi-valor">3</div><div class="kpi-label">Pendentes Aprovação</div></div>
+        <div class="kpi"><div class="kpi-valor" style="color:var(--verde)">R$12.450</div><div class="kpi-label">Total Adiantado</div></div>
+        <div class="kpi"><div class="kpi-valor">28</div><div class="kpi-label">Despesas Esse Mês</div></div>
+      </div>
+    </div>
+    <div class="section mt16">
+      <div class="section-title">Despesas em análise</div>
+      <div class="card">
+        <div class="card-header"><div class="card-titulo">NF 170</div><span class="badge badge-analise">Em Análise</span></div>
+        <div class="card-body">
+          <div class="card-tipo">Refeição</div>
+          <div class="card-info">
+            <span>📅 23/06/2026</span>
+            <span>📍 Catalão - GO</span>
+            <span style="margin-left:auto;font-weight:700;color:var(--texto)">R$ 15,00</span>
+          </div>
+          <div class="card-row mt8">
+            <div style="font-size:12px;color:var(--cinza)">João Vitor · ADV #635482</div>
+            <a href="#" style="font-size:12px;color:var(--azul-claro);font-weight:600;text-decoration:none">Ver no Intra →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="section mt16">
+      <div class="section-title">Representantes</div>
+      <div id="listaReps"></div>
+    </div>
+  </div>
+
+  <!-- ─── TELA: PERFIL ─── -->
+  <div id="pPerfil" class="page conteudo" style="padding-bottom:0">
+    <div class="perfil-header">
+      <div class="perfil-avatar" id="perfilAvatar">JV</div>
+      <div class="perfil-nome" id="perfilNome">João Vitor</div>
+      <div class="perfil-cargo" id="perfilCargo">Auditor · Regional Administrativa</div>
+    </div>
+    <div class="perfil-body">
+      <div class="campo-perfil"><div class="campo-perfil-label">Criado em</div><div class="campo-perfil-valor">31/07/2024</div></div>
+      <div class="campo-perfil"><div class="campo-perfil-label">E-mail</div><div class="campo-perfil-valor" id="perfilEmail">joao.mendes@agroquima.com.br</div></div>
+      <div class="campo-perfil"><div class="campo-perfil-label">Filial</div><div class="campo-perfil-valor" id="perfilFilial">Administração - GO (ADM)</div></div>
+      <div class="campo-perfil"><div class="campo-perfil-label">Tipo de acesso</div><div class="campo-perfil-valor" id="perfilTipo">Colaborador CLT</div></div>
+      <button class="btn-sair" onclick="fazerLogout()">Sair</button>
+      <div style="height:20px"></div>
+    </div>
+  </div>
+
+  <!-- ─── BOTTOM NAV ─── -->
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="nav-item" id="navAgenda" onclick="irPara('pAgenda')" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span class="nav-label">Agenda</span>
+    </button>
+    <button class="nav-item ativo" id="navFinanceiro" onclick="irPara('pFinanceiro')" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      <span class="nav-label">Financeiro</span>
+    </button>
+    <button class="nav-item" id="navDashboard" onclick="irPara('pDashboard')" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+      <span class="nav-label">Dashboard</span>
+    </button>
+    <button class="nav-item" id="navPerfil" onclick="irPara('pPerfil')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      <span class="nav-label">Perfil</span>
+    </button>
+  </nav>
+</div><!-- /appWrapper -->
+
+<!-- ═══════════ MODAL NOVA DESPESA ═══════════ -->
+<div class="modal-overlay" id="modalDespesa">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <button onclick="fecharModal('modalDespesa')" style="background:none;border:none;font-size:20px;color:var(--cinza);cursor:pointer">←</button>
+      <div class="modal-titulo">Nova despesa</div>
+    </div>
+    <div class="modal-body">
+      <!-- Steps -->
+      <div class="steps" id="stepsEl">
+        <div class="step ativo" id="step1"><div class="step-num">1</div><div class="step-label">Dados gerais</div></div>
+        <div class="step" id="step2"><div class="step-num">2</div><div class="step-label">Nota Fiscal</div></div>
+      </div>
+
+      <!-- Step 1 -->
+      <div id="stepBody1">
+        <div class="form-group">
+          <div style="background:var(--azul-bg);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:var(--azul-medio);margin-bottom:16px;cursor:pointer" onclick="toggleInfo('infoJustificativa')">
+            ℹ️ <strong>Entenda a "Justificativa"</strong> ▾
+          </div>
+          <div id="infoJustificativa" style="display:none;background:var(--azul-bg);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:var(--azul-medio);margin-top:-12px;margin-bottom:12px;">
+            A justificativa é necessária quando a despesa está fora do padrão ou requer explicação adicional para aprovação.
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tipo de despesa *</label>
+          <div class="select-wrapper">
+            <select id="dTipo" onchange="verificarTipo()">
+              <option value="">Ex: Combustível</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Justificativa</label>
+          <input class="form-input" id="dJustificativa" placeholder="Se necessário, descreva aqui">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Quantidade</label>
+          <input class="form-input" id="dQtd" type="number" placeholder="Ex: 1" min="1" step="1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Valor *</label>
+          <input class="form-input" id="dValor" type="tel" placeholder="Ex: 250,00" oninput="mascaraValor(this)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Data *</label>
+          <input class="form-input" id="dData" type="tel" placeholder="Ex: 22062026" oninput="mascaraData(this)" maxlength="10">
+        </div>
+        <div class="form-group">
+          <label class="form-label">UF *</label>
+          <div class="select-wrapper">
+            <select id="dUF" onchange="atualizarCidades()">
+              <option value="">Selecione o estado</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Município *</label>
+          <div class="autocomplete-wrapper">
+            <input class="form-input autocomplete-input" id="dMunicipio" placeholder="Digite ou selecione a cidade" oninput="filtrarCidades(this.value)" autocomplete="off">
+            <div class="autocomplete-list" id="cidadesList" style="display:none"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div id="stepBody2" style="display:none">
+        <div class="form-group">
+          <label class="form-label">Número da nota fiscal *</label>
+          <input class="form-input" id="dNF" type="tel" placeholder="Ex: 170">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Anexe a nota fiscal</label>
+          <div class="upload-area" id="uploadArea" onclick="triggerUpload()">
+            <div class="upload-icon">📄</div>
+            <div class="upload-txt"><span class="upload-btn-txt">Carregar foto ou arquivo</span></div>
+            <div class="upload-limite">Não exceda 50MB</div>
+          </div>
+          <input type="file" id="fileInput" accept="image/*,application/pdf" style="display:none" onchange="arquivoSelecionado(this)">
+        </div>
+        <div class="checkbox-row mt16">
+          <input type="checkbox" id="dNFMao">
+          <label for="dNFMao">Confirmo que esta é uma nota fiscal escrita à mão e estou ciente de que ela será avaliada para aprovação.</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primario" id="btnStep" onclick="avancarStep()">Continuar</button>
+    </div>
+    <div style="height:12px"></div>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL NOVA ATIVIDADE ═══════════ -->
+<div class="modal-overlay" id="modalAtividade">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <button onclick="fecharModal('modalAtividade')" style="background:none;border:none;font-size:20px;color:var(--cinza);cursor:pointer">←</button>
+      <div class="modal-titulo">Nova atividade</div>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Tipo de atividade *</label>
+        <div class="select-wrapper">
+          <select id="aTipo"><option value="">Ex: Visita a clientes</option></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Início *</label>
+        <input class="form-input" id="aInicio" type="tel" placeholder="22062026" oninput="mascaraData(this)" maxlength="10">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fim *</label>
+        <input class="form-input" id="aFim" type="tel" placeholder="22062026" oninput="mascaraData(this)" maxlength="10">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Hora prevista</label>
+        <input class="form-input" id="aHora" type="tel" placeholder="00:00" oninput="mascaraHora(this)" maxlength="5">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Título</label>
+        <input class="form-input" id="aTitulo" placeholder="Ex: Visita para vendas">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descrição</label>
+        <textarea class="form-input" id="aDescricao" placeholder="Ex: Informações importantes sobre a atividade" rows="3" style="resize:none"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Filial solicitante</label>
+        <div class="select-wrapper">
+          <select id="aFilial"><option value="">Selecione</option></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">UF</label>
+        <div class="select-wrapper">
+          <select id="aUF" onchange="atualizarCidadesAtividade()">
+            <option value="">Selecione o estado</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Município do local</label>
+        <div class="autocomplete-wrapper">
+          <input class="form-input" id="aMunicipio" placeholder="Ex: São Paulo" oninput="filtrarCidadesAtividade(this.value)" autocomplete="off">
+          <div class="autocomplete-list" id="cidadesListAtiv" style="display:none"></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">E-mail do gerente responsável</label>
+        <input class="form-input" id="aGerente" type="email" placeholder="gerente@agroquima.com.br">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primario" onclick="salvarAtividade()">Salvar nova atividade</button>
+    </div>
+    <div style="height:12px"></div>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL FILTROS ═══════════ -->
+<div class="modal-overlay" id="modalFiltros">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <button onclick="fecharModal('modalFiltros')" style="background:none;border:none;font-size:20px;color:var(--cinza);cursor:pointer">←</button>
+      <div class="modal-titulo">Filtros</div>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">De</label>
+        <input class="form-input" id="fDe" type="tel" oninput="mascaraData(this)" maxlength="10">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Até</label>
+        <input class="form-input" id="fAte" type="tel" oninput="mascaraData(this)" maxlength="10">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primario" onclick="aplicarFiltros()">Filtrar</button>
+    </div>
+    <div style="height:12px"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════════════════════════ SCRIPTS ═══════════════════════════════════ -->
+<script src="dados-brasil.js"></script>
+<script>
+// ─── ESTADO GLOBAL ───
+let USUARIO = null;
+let STEP_ATUAL = 1;
+let DESPESAS = [];
+let ATIVIDADES = [];
+let PENDENTES_SYNC = [];
+let IS_ONLINE = navigator.onLine;
+let CAL_MES = new Date().getMonth();
+let CAL_ANO = new Date().getFullYear();
+let DIA_SELECIONADO = new Date();
+
+// ─── SERVICE WORKER ───
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').then(reg => {
+    if ('sync' in reg) {
+      window.addEventListener('online', () => {
+        reg.sync.register('agrowa-sync').catch(()=>{});
+        sincronizarPendentes();
+      });
+    }
+  });
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data && e.data.type === 'SYNC_TRIGGERED') sincronizarPendentes();
+  });
+}
+
+window.addEventListener('online', () => { IS_ONLINE = true; atualizarStatusOnline(); sincronizarPendentes(); });
+window.addEventListener('offline', () => { IS_ONLINE = false; atualizarStatusOnline(); });
+
+function atualizarStatusOnline() {
+  const badge = document.getElementById('offlineBadge');
+  if (!IS_ONLINE) badge.classList.add('visivel');
+  else badge.classList.remove('visivel');
+}
+
+// ─── INICIALIZAÇÃO ───
+function init() {
+  const u = localStorage.getItem('agrowa_usuario');
+  if (u) {
+    USUARIO = JSON.parse(u);
+    mostrarApp();
+  }
+  DESPESAS = JSON.parse(localStorage.getItem('agrowa_despesas') || '[]');
+  ATIVIDADES = JSON.parse(localStorage.getItem('agrowa_atividades') || '[]');
+  PENDENTES_SYNC = JSON.parse(localStorage.getItem('agrowa_pendentes') || '[]');
+  atualizarStatusOnline();
+  popularDados_mockados_se_vazio();
+}
+
+function popularDados_mockados_se_vazio() {
+  if (DESPESAS.length === 0) {
+    DESPESAS = [
+      { id: gerarId(), nf: '170', tipo: 'Refeição', valor: 15, data: '23/06/2026', uf: 'GO', municipio: 'Catalão', status: 'analise', sync: true },
+    ];
+    salvarDespesas();
+  }
+}
+
+// ─── LOGIN ───
+let loginTipo = 'externo';
+function setLoginTipo(tipo) {
+  loginTipo = tipo;
+  document.querySelectorAll('.login-tab').forEach((t,i) => {
+    t.classList.toggle('ativo', ['externo','estagio','clt'][i] === tipo);
+  });
+  document.getElementById('loginExterno').style.display = tipo === 'externo' ? '' : 'none';
+  document.getElementById('loginEstagio').style.display = tipo === 'estagio' ? '' : 'none';
+  document.getElementById('loginClt').style.display = tipo === 'clt' ? '' : 'none';
+}
+
+function fazerLogin() {
+  // Mock: aceita qualquer entrada com valor mínimo
+  let valido = false;
+  let perfil = {};
+
+  if (loginTipo === 'externo') {
+    const cnpj = document.getElementById('lCnpj').value;
+    const tel = document.getElementById('lTelExt').value;
+    valido = cnpj.length >= 14 && tel.length >= 10;
+    perfil = { tipo: 'representante', nome: 'Representante', identificador: cnpj, tel };
+  } else if (loginTipo === 'estagio') {
+    const cpf = document.getElementById('lCpf').value;
+    const tel = document.getElementById('lTelEst').value;
+    valido = cpf.length >= 11 && tel.length >= 10;
+    perfil = { tipo: 'estagiario', nome: 'Estagiário', identificador: cpf, tel };
+  } else {
+    const email = document.getElementById('lEmail').value;
+    const senha = document.getElementById('lSenha').value;
+    valido = email.includes('@agroquima') && senha.length >= 4;
+    // Mock: detecta gestor/gerente pelo email
+    const isGestor = email.includes('gerente') || email.includes('gestor') || email.includes('aprovador');
+    perfil = { tipo: isGestor ? 'gestor' : 'clt', nome: email.split('@')[0], email, cargo: isGestor ? 'Gerente' : 'Auditor' };
+  }
+
+  if (!valido) { mostrarToast('Verifique os dados informados'); return; }
+
+  USUARIO = perfil;
+  localStorage.setItem('agrowa_usuario', JSON.stringify(USUARIO));
+  mostrarApp();
+}
+
+function mostrarApp() {
+  document.getElementById('pLogin').style.display = 'none';
+  document.getElementById('appWrapper').style.display = 'block';
+  configurarPerfil();
+  configurarNav();
+  renderizarDespesas();
+  renderizarCalendario();
+  renderizarAtividades();
+  renderizarReps();
+  popularSelects();
+  preencherHoje();
+}
+
+function fazerLogout() {
+  localStorage.removeItem('agrowa_usuario');
+  USUARIO = null;
+  document.getElementById('pLogin').style.display = '';
+  document.getElementById('appWrapper').style.display = 'none';
+  location.reload();
+}
+
+function configurarPerfil() {
+  if (!USUARIO) return;
+  const nome = USUARIO.nome || USUARIO.email || '';
+  const iniciais = nome.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('perfilAvatar').textContent = iniciais || '?';
+  document.getElementById('perfilNome').textContent = nome;
+  document.getElementById('perfilCargo').textContent = USUARIO.cargo || (USUARIO.tipo === 'representante' ? 'Representante Comercial' : USUARIO.tipo === 'estagiario' ? 'Estagiário' : 'Colaborador');
+  document.getElementById('perfilEmail').textContent = USUARIO.email || USUARIO.identificador || '—';
+  document.getElementById('perfilFilial').textContent = USUARIO.filial || 'Administração - GO (ADM)';
+  document.getElementById('perfilTipo').textContent = { representante:'Representante (PJ)', estagiario:'Estagiário', clt:'Colaborador CLT', gestor:'Gestor / Gerente' }[USUARIO.tipo] || USUARIO.tipo;
+}
+
+function configurarNav() {
+  const tipo = USUARIO?.tipo;
+  const navAg = document.getElementById('navAgenda');
+  const navFin = document.getElementById('navFinanceiro');
+  const navDash = document.getElementById('navDashboard');
+
+  if (tipo === 'gestor') {
+    navDash.style.display = '';
+    navFin.style.display = 'none';
+    navAg.style.display = 'none';
+    irPara('pDashboard');
+  } else if (tipo === 'representante') {
+    navFin.style.display = '';
+    navAg.style.display = 'none';
+    navDash.style.display = 'none';
+    irPara('pFinanceiro');
+  } else {
+    navFin.style.display = '';
+    navAg.style.display = '';
+    navDash.style.display = 'none';
+    irPara('pFinanceiro');
+  }
+}
+
+// ─── NAVEGAÇÃO ───
+function irPara(paginaId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('ativa'));
+  document.getElementById(paginaId).classList.add('ativa');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('ativo'));
+  const mapa = { pAgenda:'navAgenda', pFinanceiro:'navFinanceiro', pDashboard:'navDashboard', pPerfil:'navPerfil' };
+  if (mapa[paginaId]) document.getElementById(mapa[paginaId])?.classList.add('ativo');
+  if (paginaId === 'pAgenda') renderizarCalendario();
+}
+
+// ─── DESPESAS ───
+function renderizarDespesas() {
+  const lista = document.getElementById('listaDespesas');
+  if (!lista) return;
+  if (DESPESAS.length === 0) {
+    lista.innerHTML = `<div class="empty"><div class="empty-icon">💳</div><div class="empty-titulo">Não possui despesas cadastradas</div><div class="empty-sub">Adicione uma nova despesa</div></div>`;
+    return;
+  }
+  const meses = {};
+  DESPESAS.forEach(d => {
+    const mes = d.data ? d.data.slice(3) : 'junho 2026';
+    if (!meses[mes]) meses[mes] = [];
+    meses[mes].push(d);
+  });
+  lista.innerHTML = Object.entries(meses).map(([mes, itens]) => `
+    <div style="font-size:13px;color:var(--cinza);margin:8px 0 8px;font-weight:500">${mes}</div>
+    ${itens.map(d => cardDespesa(d)).join('')}
+  `).join('');
+
+  // Atualizar saldos
+  const consumido = DESPESAS.reduce((s, d) => s + (d.valor || 0), 0);
+  const total = 1000;
+  document.getElementById('advCons').textContent = 'R$ ' + consumido.toFixed(2).replace('.',',');
+  document.getElementById('advDisp').textContent = 'R$ ' + (total - consumido).toFixed(2).replace('.',',');
+}
+
+function cardDespesa(d) {
+  const badges = { analise:'badge-analise', aprovada:'badge-aprovada', reprovada:'badge-reprovada', pendente:'badge-sincronizando' };
+  const labels = { analise:'Em Análise', aprovada:'Aprovada', reprovada:'Reprovada', pendente:'Aguardando Sync' };
+  const b = badges[d.status] || 'badge-analise';
+  const l = labels[d.status] || 'Em Análise';
+  return `
+    <div class="card" style="margin-bottom:10px">
+      <div class="card-header">
+        <div>
+          <div class="card-titulo">NF ${d.nf || '—'}</div>
+          <div class="card-id">ID ${d.id}</div>
+        </div>
+        <div style="position:relative">
+          <button onclick="toggleMenu('menu_${d.id}')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--cinza);padding:4px">⋯</button>
+          <div id="menu_${d.id}" style="display:none;position:absolute;right:0;top:30px;background:white;border-radius:var(--radius-sm);box-shadow:0 4px 16px rgba(0,0,0,0.15);z-index:50;min-width:140px">
+            <div onclick="verAnexo('${d.id}')" style="padding:12px 16px;font-size:14px;cursor:pointer;border-bottom:1px solid var(--borda)">Ver anexo</div>
+            <div onclick="excluirDespesa('${d.id}')" style="padding:12px 16px;font-size:14px;cursor:pointer;color:var(--vermelho)">Excluir</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-row">
+          <div class="card-tipo">${d.tipo}</div>
+          <span class="badge ${b}">${l}</span>
+        </div>
+        <div class="card-info">
+          <span>📅 ${d.data}</span>
+          <span>📍 ${d.municipio} - ${d.uf}</span>
+          <span style="margin-left:auto;font-weight:700;color:var(--texto);font-size:14px">R$ ${(d.valor||0).toFixed(2).replace('.',',')}</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+function toggleMenu(id) {
+  document.querySelectorAll('[id^="menu_"]').forEach(m => { if (m.id !== id) m.style.display = 'none'; });
+  const m = document.getElementById(id);
+  m.style.display = m.style.display === 'none' ? '' : 'none';
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('[id^="menu_"]') && e.target.textContent !== '⋯') {
+    document.querySelectorAll('[id^="menu_"]').forEach(m => m.style.display = 'none');
+  }
+});
+
+function excluirDespesa(id) {
+  if (!confirm('Deseja excluir essa despesa?\nEssa ação é irreversível.')) return;
+  DESPESAS = DESPESAS.filter(d => d.id !== id);
+  salvarDespesas();
+  renderizarDespesas();
+  mostrarToast('Despesa excluída');
+}
+
+function verAnexo(id) {
+  mostrarToast('Sem anexo disponível offline');
+}
+
+// ─── MODAL DESPESA ───
+function abrirModalDespesa() {
+  STEP_ATUAL = 1;
+  atualizarStep();
+  limparFormDespesa();
+  document.getElementById('modalDespesa').classList.add('aberto');
+}
+
+function limparFormDespesa() {
+  ['dTipo','dJustificativa','dQtd','dValor','dData','dNF'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('dUF').value = '';
+  document.getElementById('dMunicipio').value = '';
+  document.getElementById('dNFMao').checked = false;
+  document.getElementById('uploadArea').innerHTML = `<div class="upload-icon">📄</div><div class="upload-txt"><span class="upload-btn-txt">Carregar foto ou arquivo</span></div><div class="upload-limite">Não exceda 50MB</div>`;
+  document.getElementById('dData').value = hojeFormatado();
+}
+
+function hojeFormatado() {
+  const h = new Date();
+  return `${String(h.getDate()).padStart(2,'0')}/${String(h.getMonth()+1).padStart(2,'0')}/${h.getFullYear()}`;
+}
+
+function avancarStep() {
+  if (STEP_ATUAL === 1) {
+    if (!document.getElementById('dTipo').value) { mostrarToast('Selecione o tipo de despesa'); return; }
+    if (!document.getElementById('dValor').value) { mostrarToast('Informe o valor'); return; }
+    if (!document.getElementById('dData').value) { mostrarToast('Informe a data'); return; }
+    if (!document.getElementById('dUF').value) { mostrarToast('Selecione o estado'); return; }
+    if (!document.getElementById('dMunicipio').value) { mostrarToast('Informe o município'); return; }
+    STEP_ATUAL = 2;
+    atualizarStep();
+  } else {
+    salvarDespesa();
+  }
+}
+
+function atualizarStep() {
+  document.getElementById('stepBody1').style.display = STEP_ATUAL === 1 ? '' : 'none';
+  document.getElementById('stepBody2').style.display = STEP_ATUAL === 2 ? '' : 'none';
+  document.getElementById('btnStep').textContent = STEP_ATUAL === 1 ? 'Continuar' : 'Salvar nova solicitação';
+  document.getElementById('step1').className = 'step ' + (STEP_ATUAL === 1 ? 'ativo' : 'completo');
+  document.getElementById('step2').className = 'step ' + (STEP_ATUAL === 2 ? 'ativo' : '');
+}
+
+function salvarDespesa() {
+  const despesa = {
+    id: gerarId(),
+    tipo: document.getElementById('dTipo').value,
+    justificativa: document.getElementById('dJustificativa').value,
+    qtd: document.getElementById('dQtd').value,
+    valor: parseFloat((document.getElementById('dValor').value || '0').replace(',','.')),
+    data: document.getElementById('dData').value,
+    uf: document.getElementById('dUF').value,
+    municipio: document.getElementById('dMunicipio').value,
+    nf: document.getElementById('dNF').value,
+    nfMao: document.getElementById('dNFMao').checked,
+    status: IS_ONLINE ? 'analise' : 'pendente',
+    sync: IS_ONLINE,
+    criadoEm: new Date().toISOString()
+  };
+
+  DESPESAS.unshift(despesa);
+  salvarDespesas();
+
+  if (!IS_ONLINE) {
+    PENDENTES_SYNC.push(despesa.id);
+    localStorage.setItem('agrowa_pendentes', JSON.stringify(PENDENTES_SYNC));
+  }
+
+  fecharModal('modalDespesa');
+  renderizarDespesas();
+  mostrarToast(IS_ONLINE ? '✓ Despesa salva com sucesso' : '⚡ Salvo offline — sincronizará automaticamente');
+}
+
+// ─── SINCRONIZAÇÃO ───
+async function sincronizarPendentes() {
+  if (!IS_ONLINE || PENDENTES_SYNC.length === 0) return;
+  document.getElementById('syncBanner').classList.add('visivel');
+  // Simula envio para API
+  await new Promise(r => setTimeout(r, 1500));
+  DESPESAS = DESPESAS.map(d => {
+    if (PENDENTES_SYNC.includes(d.id)) return { ...d, status: 'analise', sync: true };
+    return d;
+  });
+  PENDENTES_SYNC = [];
+  salvarDespesas();
+  localStorage.setItem('agrowa_pendentes', JSON.stringify([]));
+  document.getElementById('syncBanner').classList.remove('visivel');
+  renderizarDespesas();
+  mostrarToast('✓ Lançamentos sincronizados');
+}
+
+// ─── ATIVIDADES ───
+function abrirModalAtividade() {
+  document.getElementById('aInicio').value = hojeFormatado();
+  document.getElementById('aFim').value = hojeFormatado();
+  document.getElementById('aHora').value = '00:00';
+  document.getElementById('modalAtividade').classList.add('aberto');
+}
+
+function salvarAtividade() {
+  const ativ = {
+    id: gerarId(),
+    tipo: document.getElementById('aTipo').value,
+    inicio: document.getElementById('aInicio').value,
+    fim: document.getElementById('aFim').value,
+    hora: document.getElementById('aHora').value,
+    titulo: document.getElementById('aTitulo').value,
+    descricao: document.getElementById('aDescricao').value,
+    filial: document.getElementById('aFilial').value,
+    uf: document.getElementById('aUF').value,
+    municipio: document.getElementById('aMunicipio').value,
+    gerente: document.getElementById('aGerente').value,
+    sync: IS_ONLINE,
+    criadoEm: new Date().toISOString()
+  };
+  if (!ativ.tipo) { mostrarToast('Selecione o tipo de atividade'); return; }
+  ATIVIDADES.unshift(ativ);
+  localStorage.setItem('agrowa_atividades', JSON.stringify(ATIVIDADES));
+  fecharModal('modalAtividade');
+  renderizarCalendario();
+  renderizarAtividades();
+  mostrarToast(IS_ONLINE ? '✓ Atividade salva' : '⚡ Salvo offline — sincronizará automaticamente');
+}
+
+// ─── CALENDÁRIO ───
+function renderizarCalendario() {
+  const el = document.getElementById('calendarioEl');
+  if (!el) return;
+  const hoje = new Date();
+  const primeiro = new Date(CAL_ANO, CAL_MES, 1);
+  const ultimo = new Date(CAL_ANO, CAL_MES + 1, 0);
+  const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const dias = ['Seg','Ter','Qua','Qui','Sex','Sab','Dom'];
+  let inicioSemana = (primeiro.getDay() + 6) % 7; // segunda = 0
+  let celulas = '';
+  dias.forEach(d => celulas += `<div class="cal-dia-label">${d}</div>`);
+  for (let i = 0; i < inicioSemana; i++) celulas += `<div></div>`;
+  for (let d = 1; d <= ultimo.getDate(); d++) {
+    const ehHoje = d === hoje.getDate() && CAL_MES === hoje.getMonth() && CAL_ANO === hoje.getFullYear();
+    const ehSel = d === DIA_SELECIONADO.getDate() && CAL_MES === DIA_SELECIONADO.getMonth() && CAL_ANO === DIA_SELECIONADO.getFullYear();
+    const temAtiv = ATIVIDADES.some(a => {
+      const dataAtiv = a.inicio ? a.inicio.split('/') : null;
+      if (!dataAtiv) return false;
+      return parseInt(dataAtiv[0]) === d && parseInt(dataAtiv[1]) === (CAL_MES+1) && parseInt(dataAtiv[2]) === CAL_ANO;
+    });
+    celulas += `<div class="cal-dia${ehHoje?' hoje':''}${ehSel&&!ehHoje?' selecionado':''}${temAtiv?' tem-atividade':''}" onclick="selecionarDia(${d})">${d}</div>`;
+  }
+  el.innerHTML = `
+    <div class="cal-header">
+      <button class="cal-nav" onclick="navMes(-1)">‹</button>
+      <div class="cal-mes">${meses[CAL_MES]} de ${CAL_ANO}</div>
+      <button class="cal-nav" onclick="navMes(1)">›</button>
+    </div>
+    <div class="cal-grid">${celulas}</div>`;
+  document.getElementById('hDataAgenda').textContent = `${DIA_SELECIONADO.getDate()} de ${meses[DIA_SELECIONADO.getMonth()]} de ${DIA_SELECIONADO.getFullYear()}`;
+}
+
+function navMes(delta) {
+  CAL_MES += delta;
+  if (CAL_MES > 11) { CAL_MES = 0; CAL_ANO++; }
+  if (CAL_MES < 0) { CAL_MES = 11; CAL_ANO--; }
+  renderizarCalendario();
+}
+
+function selecionarDia(d) {
+  DIA_SELECIONADO = new Date(CAL_ANO, CAL_MES, d);
+  renderizarCalendario();
+  renderizarAtividades();
+}
+
+function renderizarAtividades() {
+  const lista = document.getElementById('listaAtividades');
+  if (!lista) return;
+  const atDia = ATIVIDADES.filter(a => {
+    const dataAtiv = a.inicio ? a.inicio.split('/') : null;
+    if (!dataAtiv) return false;
+    return parseInt(dataAtiv[0]) === DIA_SELECIONADO.getDate() && parseInt(dataAtiv[1]) === (DIA_SELECIONADO.getMonth()+1) && parseInt(dataAtiv[2]) === DIA_SELECIONADO.getFullYear();
+  });
+  if (atDia.length === 0) {
+    lista.innerHTML = `<div class="empty" style="padding:28px 0"><div class="empty-icon">📅</div><div class="empty-titulo">Não possui tarefas nessa data</div><div class="empty-sub">Adicione uma nova atividade</div></div>`;
+    return;
+  }
+  lista.innerHTML = atDia.map(a => `
+    <div class="card" style="margin-bottom:10px">
+      <div class="card-body" style="padding:14px 16px">
+        <div class="card-row"><div class="card-titulo">${a.titulo || a.tipo}</div><span class="badge badge-analise">${a.tipo}</span></div>
+        <div class="card-info" style="margin-top:10px">
+          <span>🕐 ${a.hora || '00:00'}</span>
+          ${a.municipio ? `<span>📍 ${a.municipio}${a.uf?' - '+a.uf:''}</span>` : ''}
+        </div>
+        ${a.descricao ? `<div style="font-size:12px;color:var(--cinza);margin-top:8px">${a.descricao}</div>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+// ─── DASHBOARD ───
+function renderizarReps() {
+  const lista = document.getElementById('listaReps');
+  if (!lista) return;
+  const reps = [
+    { nome: 'TOBIAS ALVES DE F NETTO', adv: 635032, valor: 280, status: 'Aberto/Enviado' },
+    { nome: 'AGRO FERREIRA REP AGROPECUARIA', adv: 635127, valor: 100, status: 'Aberto/Enviado' },
+    { nome: 'JAIRO OLIVEIRA COSTA JUNIOR', adv: 635403, valor: 1500, status: 'Pen. Aprovação Despesa' },
+    { nome: 'WENDER PARTATA SANTOS', adv: 635404, valor: 800, status: 'Aberto/Enviado' },
+  ];
+  lista.innerHTML = reps.map(r => {
+    const iniciais = r.nome.split(' ').slice(0,2).map(n=>n[0]).join('');
+    const pendente = r.status.includes('Pen');
+    return `
+    <div class="rep-item">
+      <div class="rep-avatar">${iniciais}</div>
+      <div class="rep-info">
+        <div class="rep-nome">${r.nome.slice(0,28)}${r.nome.length>28?'…':''}</div>
+        <div class="rep-detalhe">ADV #${r.adv} · <span style="color:${pendente?'var(--vermelho)':'var(--cinza)'}">${r.status}</span></div>
+      </div>
+      <div class="rep-valor">R$${r.valor}</div>
+    </div>`;
+  }).join('');
+}
+
+// ─── SELECTS / AUTOCOMPLETE ───
+function popularSelects() {
+  // Tipos de despesa
+  const dTipo = document.getElementById('dTipo');
+  dTipo.innerHTML = '<option value="">Selecione o tipo</option>' + TIPOS_DESPESA.map(t => `<option>${t}</option>`).join('');
+
+  // Tipos atividade
+  const aTipo = document.getElementById('aTipo');
+  aTipo.innerHTML = '<option value="">Selecione o tipo</option>' + TIPOS_ATIVIDADE.map(t => `<option>${t}</option>`).join('');
+
+  // Estados
+  const estados_html = '<option value="">Selecione o estado</option>' + ESTADOS.map(e => `<option value="${e.uf}">${e.uf} - ${e.nome}</option>`).join('');
+  document.getElementById('dUF').innerHTML = estados_html;
+  document.getElementById('aUF').innerHTML = estados_html;
+
+  // Filiais
+  const aFilial = document.getElementById('aFilial');
+  aFilial.innerHTML = '<option value="">Selecione a filial</option>' + FILIAIS.map(f => `<option value="${f.id}">${f.nome}</option>`).join('');
+}
+
+function atualizarCidades() {
+  const uf = document.getElementById('dUF').value;
+  document.getElementById('dMunicipio').value = '';
+  document.getElementById('cidadesList').style.display = 'none';
+  if (uf) document.getElementById('dMunicipio').placeholder = 'Digite ou selecione a cidade';
+}
+
+function atualizarCidadesAtividade() {
+  const uf = document.getElementById('aUF').value;
+  document.getElementById('aMunicipio').value = '';
+  document.getElementById('cidadesListAtiv').style.display = 'none';
+}
+
+function filtrarCidades(q) {
+  const uf = document.getElementById('dUF').value;
+  const lista = document.getElementById('cidadesList');
+  if (!q || q.length < 2) { lista.style.display = 'none'; return; }
+  const cidades = uf ? (MUNICIPIOS[uf] || []) : Object.values(MUNICIPIOS).flat();
+  const filtradas = cidades.filter(c => c.toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  if (filtradas.length === 0) { lista.style.display = 'none'; return; }
+  lista.innerHTML = filtradas.map(c => `<div class="autocomplete-item" onclick="selecionarCidade('${c}','dMunicipio','cidadesList')">${c}</div>`).join('');
+  lista.style.display = '';
+}
+
+function filtrarCidadesAtividade(q) {
+  const uf = document.getElementById('aUF').value;
+  const lista = document.getElementById('cidadesListAtiv');
+  if (!q || q.length < 2) { lista.style.display = 'none'; return; }
+  const cidades = uf ? (MUNICIPIOS[uf] || []) : Object.values(MUNICIPIOS).flat();
+  const filtradas = cidades.filter(c => c.toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  if (filtradas.length === 0) { lista.style.display = 'none'; return; }
+  lista.innerHTML = filtradas.map(c => `<div class="autocomplete-item" onclick="selecionarCidade('${c}','aMunicipio','cidadesListAtiv')">${c}</div>`).join('');
+  lista.style.display = '';
+}
+
+function selecionarCidade(cidade, inputId, listaId) {
+  document.getElementById(inputId).value = cidade;
+  document.getElementById(listaId).style.display = 'none';
+}
+
+// ─── MÁSCARAS ───
+function mascaraCNPJ(el) {
+  let v = el.value.replace(/\D/g,'').slice(0,14);
+  if (v.length > 12) v = v.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5');
+  else if (v.length > 8) v = v.replace(/(\d{2})(\d{3})(\d{3})(\d*)/,'$1.$2.$3/$4');
+  else if (v.length > 5) v = v.replace(/(\d{2})(\d{3})(\d*)/,'$1.$2.$3');
+  else if (v.length > 2) v = v.replace(/(\d{2})(\d*)/,'$1.$2');
+  el.value = v;
+}
+
+function mascaraCPF(el) {
+  let v = el.value.replace(/\D/g,'').slice(0,11);
+  if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/,'$1.$2.$3-$4');
+  else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d*)/,'$1.$2.$3');
+  else if (v.length > 3) v = v.replace(/(\d{3})(\d*)/,'$1.$2');
+  el.value = v;
+}
+
+function mascaraTel(el) {
+  let v = el.value.replace(/\D/g,'').slice(0,11);
+  if (v.length > 6) v = v.replace(/(\d{2})(\d{4,5})(\d{4})/,'($1) $2-$3');
+  else if (v.length > 2) v = v.replace(/(\d{2})(\d*)/,'($1) $2');
+  el.value = v;
+}
+
+function mascaraData(el) {
+  let v = el.value.replace(/\D/g,'').slice(0,8);
+  if (v.length > 4) v = v.replace(/(\d{2})(\d{2})(\d*)/,'$1/$2/$3');
+  else if (v.length > 2) v = v.replace(/(\d{2})(\d*)/,'$1/$2');
+  el.value = v;
+}
+
+function mascaraValor(el) {
+  let v = el.value.replace(/[^\d,]/g,'');
+  el.value = v;
+}
+
+function mascaraHora(el) {
+  let v = el.value.replace(/\D/g,'').slice(0,4);
+  if (v.length > 2) v = v.replace(/(\d{2})(\d*)/,'$1:$2');
+  el.value = v;
+}
+
+// ─── UPLOAD ───
+function triggerUpload() { document.getElementById('fileInput').click(); }
+function arquivoSelecionado(input) {
+  if (input.files && input.files[0]) {
+    const nome = input.files[0].name;
+    document.getElementById('uploadArea').classList.add('com-arquivo');
+    document.getElementById('uploadArea').innerHTML = `<div class="upload-icon">✅</div><div class="upload-txt" style="color:var(--verde);font-weight:600">${nome}</div><div class="upload-limite">Arquivo selecionado</div>`;
+  }
+}
+
+// ─── FILTROS ───
+function abrirFiltros() {
+  document.getElementById('fDe').value = '';
+  document.getElementById('fAte').value = '';
+  document.getElementById('modalFiltros').classList.add('aberto');
+}
+function aplicarFiltros() {
+  fecharModal('modalFiltros');
+  mostrarToast('Filtro aplicado');
+}
+
+// ─── UTILS ───
+function fecharModal(id) { document.getElementById(id).classList.remove('aberto'); }
+function gerarId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function salvarDespesas() { localStorage.setItem('agrowa_despesas', JSON.stringify(DESPESAS)); }
+function toggleInfo(id) { const el = document.getElementById(id); el.style.display = el.style.display === 'none' ? '' : 'none'; }
+function preencherHoje() {
+  const h = hojeFormatado();
+  const fDe = document.getElementById('fDe');
+  const fAte = document.getElementById('fAte');
+  if (fDe) fDe.value = h;
+  if (fAte) fAte.value = h;
+}
+function verificarTipo() {}
+
+let toastTimer;
+function mostrarToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('visivel');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('visivel'), 2800);
+}
+
+// Fechar modais ao clicar no overlay
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('aberto'); });
+});
+
+init();
+</script>
+</body>
+</html>
