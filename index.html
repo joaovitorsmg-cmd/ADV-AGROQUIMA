@@ -441,6 +441,11 @@ body {
       </button>
     </div>
 
+    <!-- Botão Autorizar fechamento do ADV (autorização única para todo o adiantamento) -->
+    <div class="section mt12" id="advFechamentoWrap" style="display:none">
+      <button class="btn-secundario" onclick="abrirAutorizarFechamentoADV()">🔒 Autorizar fechamento do ADV</button>
+    </div>
+
     <!-- Lista Despesas -->
     <div class="filtros-bar">
       <div class="section-title" style="margin:0">Últimas despesas</div>
@@ -560,7 +565,7 @@ body {
     <div class="modal-handle"></div>
     <div class="modal-header">
       <button onclick="fecharModal('modalDespesa')" style="background:none;border:none;font-size:20px;color:var(--cinza);cursor:pointer">←</button>
-      <div class="modal-titulo">Nova despesa</div>
+      <div class="modal-titulo" id="modalDespesaTitulo">Nova despesa</div>
     </div>
     <div class="modal-body">
       <!-- Steps -->
@@ -597,11 +602,15 @@ body {
         </div>
         <div class="form-group">
           <label class="form-label">Valor *</label>
-          <input class="form-input" id="dValor" type="tel" placeholder="Ex: 250,00" oninput="mascaraValor(this)">
+          <input class="form-input" id="dValor" type="tel" placeholder="Ex: 250,00" oninput="mascaraValor(this)" onblur="finalizarMascaraValor(this)">
         </div>
         <div class="form-group">
           <label class="form-label">Data *</label>
-          <input class="form-input" id="dData" type="tel" placeholder="Ex: 22062026" oninput="mascaraData(this)" maxlength="10">
+          <div style="position:relative">
+            <input class="form-input" id="dData" type="tel" placeholder="Ex: 22062026" oninput="mascaraData(this); sincronizarDataNativa()" maxlength="10" style="padding-right:42px">
+            <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:17px;pointer-events:none">📅</span>
+            <input type="date" id="dDataNativo" onchange="dataNativaAlterada(this)" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);width:30px;height:30px;opacity:0;border:none;cursor:pointer">
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">UF *</label>
@@ -864,18 +873,19 @@ body {
   </div>
 </div>
 
-<!-- ═══════════ MODAL AUTORIZAR FECHAMENTO DE DESPESA ═══════════ -->
+<!-- ═══════════ MODAL AUTORIZAR FECHAMENTO DO ADV ═══════════ -->
 <div class="modal-overlay" id="modalFecharDespesa">
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-header">
       <button onclick="fecharModal('modalFecharDespesa')" style="background:none;border:none;font-size:20px;color:var(--cinza);cursor:pointer">←</button>
-      <div class="modal-titulo">Autorizar fechamento</div>
+      <div class="modal-titulo">Autorizar fechamento do ADV</div>
     </div>
     <div class="modal-body">
       <div style="font-size:14px;color:var(--texto);line-height:1.5">
-        Ao confirmar, você autoriza que esta despesa (<strong id="fdNumeroNF"></strong>) seja fechada no sistema interno da Agroquima (Intra). Sem essa autorização, o Intra não deve concluir o fechamento desta despesa.
+        Ao confirmar, você autoriza que <strong id="fdQtdDespesas"></strong> deste ADV sejam fechadas no sistema interno da Agroquima (Intra). Sem essa autorização, o Intra não deve concluir o fechamento dessas despesas.
       </div>
+      <div id="fdAvisoDivergencia" style="display:none;margin-top:10px;background:#FEF3C7;color:#92400E;font-size:12px;font-weight:600;border-radius:var(--radius-sm);padding:8px 10px">⚠️ Há despesas com divergências sinalizadas pela leitura automática. Edite-as antes de continuar, se necessário.</div>
     </div>
     <div class="modal-footer">
       <button class="btn-primario" onclick="confirmarFechamentoDespesa()">Autorizar fechamento</button>
@@ -906,7 +916,7 @@ let OCR_ARQUIVO_ATUAL = null;
 let OCR_RESULTADO_ATUAL = null;
 let PA_TIPO = 'representante';
 let PA_IDENTIFICADOR_VERIFICADO = null;
-let DESPESA_FECHAR_ID = null;
+let DESPESA_EDITANDO_ID = null;
 
 // ─── SERVICE WORKER ───
 if ('serviceWorker' in navigator) {
@@ -1176,29 +1186,32 @@ async function salvarNovaSenha() {
   }
 }
 
-// ─── AUTORIZAÇÃO DE FECHAMENTO (consentimento do app para o Intra fechar a despesa) ───
-function abrirConfirmarFechamento(id) {
-  DESPESA_FECHAR_ID = id;
-  const d = DESPESAS.find(x => x.id === id);
-  document.getElementById('fdNumeroNF').textContent = d ? ('NF ' + (d.nf || '—')) : '';
+// ─── AUTORIZAÇÃO DE FECHAMENTO (consentimento do app para o Intra fechar as despesas do ADV) ───
+function abrirAutorizarFechamentoADV() {
+  const pendentes = DESPESAS.filter(d => d.status !== 'reprovada' && !d.fechamentoAutorizadoPeloUsuario);
+  if (pendentes.length === 0) { mostrarToast('Não há despesas pendentes de autorização'); return; }
+  document.getElementById('fdQtdDespesas').textContent = pendentes.length + (pendentes.length === 1 ? ' despesa' : ' despesas');
+  document.getElementById('fdAvisoDivergencia').style.display = pendentes.some(temDivergenciaDespesa) ? '' : 'none';
   document.getElementById('modalFecharDespesa').classList.add('aberto');
 }
 
 async function confirmarFechamentoDespesa() {
-  if (!DESPESA_FECHAR_ID) return;
+  const pendentes = DESPESAS.filter(d => d.status !== 'reprovada' && !d.fechamentoAutorizadoPeloUsuario);
+  if (pendentes.length === 0) { fecharModal('modalFecharDespesa'); return; }
   try {
-    await DESPESAS_API.autorizarFechamento(DESPESA_FECHAR_ID, USUARIO?.identificador);
-    DESPESAS = DESPESAS.map(d => d.id === DESPESA_FECHAR_ID
-      ? { ...d, fechamentoAutorizadoPeloUsuario: true, fechamentoAutorizadoEm: new Date().toISOString() }
+    await Promise.all(pendentes.map(d => DESPESAS_API.autorizarFechamento(d.id, USUARIO?.identificador)));
+    const idsAutorizados = new Set(pendentes.map(d => d.id));
+    const agora = new Date().toISOString();
+    DESPESAS = DESPESAS.map(d => idsAutorizados.has(d.id)
+      ? { ...d, fechamentoAutorizadoPeloUsuario: true, fechamentoAutorizadoEm: agora }
       : d);
     salvarDespesas();
     renderizarDespesas();
     fecharModal('modalFecharDespesa');
-    mostrarToast('🔒 Fechamento autorizado');
+    mostrarToast('🔒 Fechamento do ADV autorizado');
   } catch (e) {
     mostrarToast(e.message || 'Não foi possível registrar a autorização');
   }
-  DESPESA_FECHAR_ID = null;
 }
 
 function configurarNav() {
@@ -1239,8 +1252,10 @@ function irPara(paginaId) {
 function renderizarDespesas() {
   const lista = document.getElementById('listaDespesas');
   if (!lista) return;
+  const wrapAdv = document.getElementById('advFechamentoWrap');
   if (DESPESAS.length === 0) {
     lista.innerHTML = `<div class="empty"><div class="empty-icon">💳</div><div class="empty-titulo">Não possui despesas cadastradas</div><div class="empty-sub">Adicione uma nova despesa</div></div>`;
+    if (wrapAdv) wrapAdv.style.display = 'none';
     return;
   }
   const meses = {};
@@ -1254,11 +1269,20 @@ function renderizarDespesas() {
     ${itens.map(d => cardDespesa(d)).join('')}
   `).join('');
 
+  if (wrapAdv) {
+    const pendentesAutorizacao = DESPESAS.filter(d => d.status !== 'reprovada' && !d.fechamentoAutorizadoPeloUsuario);
+    wrapAdv.style.display = pendentesAutorizacao.length > 0 ? '' : 'none';
+  }
+
   // Atualizar saldos
   const consumido = DESPESAS.reduce((s, d) => s + (d.valor || 0), 0);
   const total = 1000;
   document.getElementById('advCons').textContent = 'R$ ' + consumido.toFixed(2).replace('.',',');
   document.getElementById('advDisp').textContent = 'R$ ' + (total - consumido).toFixed(2).replace('.',',');
+}
+
+function temDivergenciaDespesa(d) {
+  return (d.itensProibidosDetectados || []).length > 0 || !!d.leituraOcrInsuficiente || !!d.numeroNfDivergente;
 }
 
 function cardDespesa(d) {
@@ -1268,7 +1292,7 @@ function cardDespesa(d) {
   const l = labels[d.status] || 'Em Análise';
   const alertaHtml = (txt) => `<div style="background:#FEF3C7;color:#92400E;font-size:11px;font-weight:600;border-radius:var(--radius-sm);padding:6px 10px;margin-top:8px">⚠️ ${txt}</div>`;
   const temItemProibido = (d.itensProibidosDetectados || []).length > 0;
-  const podeAutorizarFechamento = d.status !== 'reprovada' && !d.fechamentoAutorizadoPeloUsuario;
+  const podeEditar = temDivergenciaDespesa(d) && !d.fechamentoAutorizadoPeloUsuario;
   return `
     <div class="card" style="margin-bottom:10px">
       <div class="card-header">
@@ -1279,6 +1303,7 @@ function cardDespesa(d) {
         <div style="position:relative">
           <button onclick="toggleMenu('menu_${d.id}')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--cinza);padding:4px">⋯</button>
           <div id="menu_${d.id}" style="display:none;position:absolute;right:0;top:30px;background:white;border-radius:var(--radius-sm);box-shadow:0 4px 16px rgba(0,0,0,0.15);z-index:50;min-width:140px">
+            ${podeEditar ? `<div onclick="abrirEditarDespesa('${d.id}')" style="padding:12px 16px;font-size:14px;cursor:pointer;border-bottom:1px solid var(--borda)">✏️ Editar</div>` : ''}
             <div onclick="verAnexo('${d.id}')" style="padding:12px 16px;font-size:14px;cursor:pointer;border-bottom:1px solid var(--borda)">Ver anexo</div>
             <div onclick="excluirDespesa('${d.id}')" style="padding:12px 16px;font-size:14px;cursor:pointer;color:var(--vermelho)">Excluir</div>
           </div>
@@ -1297,9 +1322,9 @@ function cardDespesa(d) {
           <span>📍 ${d.municipio} - ${d.uf}</span>
           <span style="margin-left:auto;font-weight:700;color:var(--texto);font-size:14px">R$ ${(d.valor||0).toFixed(2).replace('.',',')}</span>
         </div>
-        ${podeAutorizarFechamento
-          ? `<div class="card-row mt8" style="justify-content:flex-end"><button onclick="abrirConfirmarFechamento('${d.id}')" style="background:none;border:none;font-size:11px;color:var(--cinza);text-decoration:underline;cursor:pointer">Autorizar fechamento</button></div>`
-          : (d.fechamentoAutorizadoPeloUsuario ? `<div class="card-row mt8" style="justify-content:flex-end"><span style="font-size:11px;color:var(--verde);font-weight:600">🔒 Fechamento autorizado</span></div>` : '')}
+        ${d.fechamentoAutorizadoPeloUsuario
+          ? `<div class="card-row mt8" style="justify-content:flex-end"><span style="font-size:11px;color:var(--verde);font-weight:600">🔒 Fechamento autorizado</span></div>`
+          : (podeEditar ? `<div class="card-row mt8" style="justify-content:flex-end"><button onclick="abrirEditarDespesa('${d.id}')" style="background:none;border:none;font-size:11px;color:var(--azul-claro);text-decoration:underline;cursor:pointer">✏️ Editar despesa</button></div>` : '')}
       </div>
     </div>`;
 }
@@ -1320,11 +1345,58 @@ function excluirDespesa(id) {
   DESPESAS = DESPESAS.filter(d => d.id !== id);
   salvarDespesas();
   renderizarDespesas();
+  excluirAnexo(id).catch(() => {});
   mostrarToast('Despesa excluída');
 }
 
-function verAnexo(id) {
-  mostrarToast('Sem anexo disponível offline');
+async function verAnexo(id) {
+  try {
+    const registro = await buscarAnexo(id);
+    if (!registro || !registro.blob) { mostrarToast('Nenhum anexo encontrado para esta despesa'); return; }
+    const url = URL.createObjectURL(registro.blob);
+    window.open(url, '_blank');
+  } catch (e) {
+    mostrarToast('Não foi possível abrir o anexo');
+  }
+}
+
+// ─── ANEXOS (armazenados no dispositivo via IndexedDB, para abrir mesmo offline) ───
+const ANEXOS_DB_NOME = 'agroquima_anexos';
+const ANEXOS_STORE = 'anexos';
+function abrirAnexosDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(ANEXOS_DB_NOME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(ANEXOS_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+function chaveAnexo(despesaId) { return chaveDados('anexo') + '_' + despesaId; }
+async function salvarAnexo(despesaId, file) {
+  const db = await abrirAnexosDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ANEXOS_STORE, 'readwrite');
+    tx.objectStore(ANEXOS_STORE).put({ blob: file, nome: file.name, tipo: file.type }, chaveAnexo(despesaId));
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function buscarAnexo(despesaId) {
+  const db = await abrirAnexosDB();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(ANEXOS_STORE, 'readonly').objectStore(ANEXOS_STORE).get(chaveAnexo(despesaId));
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function excluirAnexo(despesaId) {
+  const db = await abrirAnexosDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ANEXOS_STORE, 'readwrite');
+    tx.objectStore(ANEXOS_STORE).delete(chaveAnexo(despesaId));
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
 }
 
 // ─── MODAL DESPESA ───
@@ -1336,10 +1408,11 @@ function abrirModalDespesa() {
 }
 
 function limparFormDespesa() {
-  ['dTipo','dJustificativa','dQtd','dValor','dData','dNF'].forEach(id => {
+  ['dTipo','dJustificativa','dValor','dData','dNF'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
+  document.getElementById('dQtd').value = '1';
   document.getElementById('dUF').value = '';
   document.getElementById('dMunicipio').value = '';
   document.getElementById('dNFMao').checked = false;
@@ -1347,12 +1420,37 @@ function limparFormDespesa() {
   document.getElementById('ocrStatus').innerHTML = '';
   OCR_ARQUIVO_ATUAL = null;
   OCR_RESULTADO_ATUAL = null;
+  DESPESA_EDITANDO_ID = null;
+  document.getElementById('modalDespesaTitulo').textContent = 'Nova despesa';
   document.getElementById('dData').value = hojeFormatado();
+  sincronizarDataNativa();
 }
 
 function hojeFormatado() {
   const h = new Date();
   return `${String(h.getDate()).padStart(2,'0')}/${String(h.getMonth()+1).padStart(2,'0')}/${h.getFullYear()}`;
+}
+
+// ─── DATA: sincronização entre o campo mascarado (DD/MM/AAAA) e o calendário nativo (AAAA-MM-DD) ───
+function dataParaISO(dataBR) {
+  const m = (dataBR || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : '';
+}
+
+function isoParaData(iso) {
+  const m = (iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
+}
+
+function sincronizarDataNativa() {
+  const dData = document.getElementById('dData');
+  const dDataNativo = document.getElementById('dDataNativo');
+  if (!dData || !dDataNativo) return;
+  dDataNativo.value = dataParaISO(dData.value);
+}
+
+function dataNativaAlterada(el) {
+  document.getElementById('dData').value = isoParaData(el.value);
 }
 
 function avancarStep() {
@@ -1372,15 +1470,48 @@ function avancarStep() {
 function atualizarStep() {
   document.getElementById('stepBody1').style.display = STEP_ATUAL === 1 ? '' : 'none';
   document.getElementById('stepBody2').style.display = STEP_ATUAL === 2 ? '' : 'none';
-  document.getElementById('btnStep').textContent = STEP_ATUAL === 1 ? 'Continuar' : 'Salvar nova solicitação';
+  document.getElementById('btnStep').textContent = STEP_ATUAL === 1 ? 'Continuar' : (DESPESA_EDITANDO_ID ? 'Salvar alterações' : 'Salvar nova solicitação');
   document.getElementById('step1').className = 'step ' + (STEP_ATUAL === 1 ? 'ativo' : 'completo');
   document.getElementById('step2').className = 'step ' + (STEP_ATUAL === 2 ? 'ativo' : '');
 }
 
-function salvarDespesa() {
+// ─── EDITAR DESPESA (disponível quando há divergência sinalizada pela leitura automática) ───
+async function abrirEditarDespesa(id) {
+  const d = DESPESAS.find(x => x.id === id);
+  if (!d) return;
+  STEP_ATUAL = 1;
+  limparFormDespesa();
+  DESPESA_EDITANDO_ID = id;
+  document.getElementById('modalDespesaTitulo').textContent = 'Editar despesa';
+  document.getElementById('dTipo').value = d.tipo || '';
+  document.getElementById('dJustificativa').value = d.justificativa || '';
+  document.getElementById('dQtd').value = d.qtd || '1';
+  document.getElementById('dValor').value = (d.valor || 0).toFixed(2).replace('.', ',');
+  document.getElementById('dData').value = d.data || '';
+  sincronizarDataNativa();
+  document.getElementById('dUF').value = d.uf || '';
+  document.getElementById('dMunicipio').value = d.municipio || '';
+  document.getElementById('dNF').value = d.nf || '';
+  document.getElementById('dNFMao').checked = !!d.nfMao;
+  OCR_RESULTADO_ATUAL = {
+    chaveAcesso: d.chaveAcessoNF || null,
+    itensDetectados: d.itensProibidosDetectados || [],
+    leituraInsuficiente: !!d.leituraOcrInsuficiente,
+    numeroDivergente: !!d.numeroNfDivergente
+  };
+  renderizarStatusOCR(OCR_RESULTADO_ATUAL);
+  const anexo = await buscarAnexo(id).catch(() => null);
+  if (anexo) {
+    document.getElementById('uploadArea').classList.add('com-arquivo');
+    document.getElementById('uploadArea').innerHTML = `<div class="upload-icon">✅</div><div class="upload-txt" style="color:var(--verde);font-weight:600">${anexo.nome}</div><div class="upload-limite">Anexo já enviado — selecione outro arquivo para substituir</div>`;
+  }
+  atualizarStep();
+  document.getElementById('modalDespesa').classList.add('aberto');
+}
+
+async function salvarDespesa() {
   const ocr = OCR_RESULTADO_ATUAL;
-  const despesa = {
-    id: gerarId(),
+  const dadosFormulario = {
     tipo: document.getElementById('dTipo').value,
     justificativa: document.getElementById('dJustificativa').value,
     qtd: document.getElementById('dQtd').value,
@@ -1390,18 +1521,35 @@ function salvarDespesa() {
     municipio: document.getElementById('dMunicipio').value,
     nf: document.getElementById('dNF').value,
     nfMao: document.getElementById('dNFMao').checked,
-    status: IS_ONLINE ? 'analise' : 'pendente',
-    sync: IS_ONLINE,
-    criadoEm: new Date().toISOString(),
     chaveAcessoNF: ocr?.chaveAcesso || null,
     itensProibidosDetectados: ocr?.itensDetectados || [],
     leituraOcrInsuficiente: !!ocr?.leituraInsuficiente,
-    numeroNfDivergente: !!ocr?.numeroDivergente,
+    numeroNfDivergente: !!ocr?.numeroDivergente
+  };
+
+  if (DESPESA_EDITANDO_ID) {
+    const idEditado = DESPESA_EDITANDO_ID;
+    DESPESAS = DESPESAS.map(d => d.id === idEditado ? { ...d, ...dadosFormulario } : d);
+    salvarDespesas();
+    if (OCR_ARQUIVO_ATUAL) await salvarAnexo(idEditado, OCR_ARQUIVO_ATUAL).catch(() => {});
+    fecharModal('modalDespesa');
+    renderizarDespesas();
+    mostrarToast('✓ Despesa atualizada com sucesso');
+    return;
+  }
+
+  const despesa = {
+    id: gerarId(),
+    ...dadosFormulario,
+    status: IS_ONLINE ? 'analise' : 'pendente',
+    sync: IS_ONLINE,
+    criadoEm: new Date().toISOString(),
     fechamentoAutorizadoPeloUsuario: false
   };
 
   DESPESAS.unshift(despesa);
   salvarDespesas();
+  if (OCR_ARQUIVO_ATUAL) await salvarAnexo(despesa.id, OCR_ARQUIVO_ATUAL).catch(() => {});
 
   if (!IS_ONLINE) {
     PENDENTES_SYNC.push(despesa.id);
@@ -1593,12 +1741,17 @@ function atualizarCidadesAtividade() {
   document.getElementById('cidadesListAtiv').style.display = 'none';
 }
 
+function removerAcentos(s) {
+  return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 function filtrarCidades(q) {
   const uf = document.getElementById('dUF').value;
   const lista = document.getElementById('cidadesList');
   if (!q || q.length < 2) { lista.style.display = 'none'; return; }
+  const qNorm = removerAcentos(q.toLowerCase());
   const cidades = uf ? (MUNICIPIOS[uf] || []) : Object.values(MUNICIPIOS).flat();
-  const filtradas = cidades.filter(c => c.toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  const filtradas = cidades.filter(c => removerAcentos(c.toLowerCase()).includes(qNorm)).slice(0,8);
   if (filtradas.length === 0) { lista.style.display = 'none'; return; }
   lista.innerHTML = filtradas.map(c => `<div class="autocomplete-item" onclick="selecionarCidade('${c}','dMunicipio','cidadesList')">${c}</div>`).join('');
   lista.style.display = '';
@@ -1608,8 +1761,9 @@ function filtrarCidadesAtividade(q) {
   const uf = document.getElementById('aUF').value;
   const lista = document.getElementById('cidadesListAtiv');
   if (!q || q.length < 2) { lista.style.display = 'none'; return; }
+  const qNorm = removerAcentos(q.toLowerCase());
   const cidades = uf ? (MUNICIPIOS[uf] || []) : Object.values(MUNICIPIOS).flat();
-  const filtradas = cidades.filter(c => c.toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  const filtradas = cidades.filter(c => removerAcentos(c.toLowerCase()).includes(qNorm)).slice(0,8);
   if (filtradas.length === 0) { lista.style.display = 'none'; return; }
   lista.innerHTML = filtradas.map(c => `<div class="autocomplete-item" onclick="selecionarCidade('${c}','aMunicipio','cidadesListAtiv')">${c}</div>`).join('');
   lista.style.display = '';
@@ -1648,6 +1802,17 @@ function mascaraData(el) {
 function mascaraValor(el) {
   let v = el.value.replace(/[^\d,]/g,'');
   el.value = v;
+}
+
+// Ao saber do campo: se o usuário digitou só a parte inteira (ex: "80"), completa
+// automaticamente os centavos (ex: "80,00"), como em qualquer campo de valor monetário.
+function finalizarMascaraValor(el) {
+  let v = el.value.trim();
+  if (!v) return;
+  let [inteiro, centavos] = v.split(',');
+  inteiro = inteiro || '0';
+  centavos = (centavos || '').padEnd(2, '0').slice(0, 2);
+  el.value = `${inteiro},${centavos}`;
 }
 
 function mascaraHora(el) {
