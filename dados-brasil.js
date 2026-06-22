@@ -101,3 +101,20 @@ const TIPOS_ATIVIDADE = [
   'Visita a clientes','Prospecção','Reunião interna','Treinamento',
   'Auditoria','Evento/Feira','Entrega de produto','Outros'
 ];
+
+// Itens proibidos em notas fiscais lançadas (lista expansível pelo TI/financeiro)
+const ITENS_PROIBIDOS = [
+  'cerveja','cervejas','chopp','cigarro','cigarros','tabaco','tabacaria',
+  'bebida alcoolica','bebidas alcoolicas','whisky','whiskey','vodka','cachaca',
+  'vinho','espumante','narguile'
+];
+
+// Identificadores de demonstração já existentes na base da Agroquima (MOCK).
+// Em produção, a verificação de pré-cadastro deve chamar a API real (token Fernando/TI)
+// em vez desta lista local — ver API_CONFIG em api.js.
+const PRE_CADASTRADOS_DEMO = [
+  { tipo: 'representante', identificador: '00000000000100' },
+  { tipo: 'estagiario', identificador: '00000000000' },
+  { tipo: 'clt', identificador: 'joao.mendes@agroquima.com.br' },
+  { tipo: 'clt', identificador: 'gerente.rv@agroquima.com.br' }
+];

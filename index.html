@@ -3,26 +3,36 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#0A2E6E">
+<meta name="theme-color" content="#0057B8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>AgroWA</title>
+<title>Agroquima</title>
 <link rel="manifest" href="manifest.json">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --azul: #0A2E6E;
-  --azul-medio: #1448A8;
-  --azul-claro: #2563EB;
-  --azul-bg: #EEF3FC;
-  --verde: #16A34A;
-  --vermelho: #DC2626;
-  --amarelo: #D97706;
-  --cinza: #6B7280;
-  --cinza-claro: #F3F4F6;
+  /* Paleta oficial Agroquima */
+  --azul: #0057B8;        /* Azul Royal Principal */
+  --azul-medio: #003D82;  /* Azul Royal Escuro */
+  --azul-profundo: #00295C; /* Azul Profundo */
+  --azul-claro: #0057B8;  /* uso em CTAs/links — Royal Principal (25% da hierarquia de marca) */
+  --azul-apoio: #5FA8FF;  /* Azul Claro de Apoio — decorativo */
+  --azul-bg: #DCEBFF;     /* Azul Muito Claro — fundos leves */
+  --verde: #16A34A;       /* cor semântica de status (aprovado) — não é cor de marca */
+  --vermelho: #DC2626;    /* cor semântica de status/alerta — não é cor de marca */
+  --amarelo: #D97706;     /* cor semântica de status/atenção — não é cor de marca */
+  --cinza: #7A7A7A;       /* Cinza Médio */
+  --cinza-claro: #E6E6E6; /* Cinza Claro */
   --branco: #FFFFFF;
-  --texto: #111827;
-  --texto-suave: #6B7280;
-  --borda: #E5E7EB;
+  --texto: #000000;       /* Preto Institucional */
+  --texto-suave: #7A7A7A;
+  --borda: #E6E6E6;
+  --fonte-titulo: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --fonte-corpo: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --sombra: 0 1px 4px rgba(0,0,0,0.10);
   --radius: 14px;
   --radius-sm: 8px;
@@ -33,7 +43,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--fonte-corpo);
   background: var(--cinza-claro);
   color: var(--texto);
   min-height: 100vh;
@@ -41,6 +51,14 @@ body {
   margin: 0 auto;
   position: relative;
   overflow-x: hidden;
+}
+
+/* ─── TIPOGRAFIA DE MARCA (Montserrat para títulos/CTAs, Open Sans para corpo) ─── */
+.header h1, .login-titulo, .hero-label, .hero-adv-num, .hero-valor, .hero-card-valor,
+.card-titulo, .kpi-valor, .btn-primario, .btn-nova-texto, .btn-sair, .modal-titulo,
+.section-title, .login-tab, .nav-label, .perfil-nome, .empty-titulo, .step-label,
+.cal-mes, .rep-valor, .filtros-btn {
+  font-family: var(--fonte-titulo);
 }
 
 /* ─── TOPO ─── */
@@ -157,14 +175,13 @@ body {
 
 /* ─── LOGIN ─── */
 .login-container {
-  min-height: 100vh; background: var(--azul);
+  min-height: 100vh; background: linear-gradient(160deg, var(--azul) 0%, var(--azul-profundo) 100%);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: 40px 28px;
 }
-.login-logo { font-size: 48px; margin-bottom: 8px; }
-.login-titulo { color: white; font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
-.login-sub { color: rgba(255,255,255,0.65); font-size: 14px; margin-top: 4px; margin-bottom: 36px; }
-.login-card { background: white; border-radius: 20px; padding: 28px 24px; width: 100%; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+.login-logo-img { width: 190px; max-width: 70%; display: block; margin: 0 auto 6px; }
+.login-sub { color: var(--texto-suave); font-size: 13px; text-align: center; margin-top: 2px; margin-bottom: 24px; font-family: var(--fonte-titulo); font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; }
+.login-card { background: white; border-radius: 20px; padding: 28px 24px; width: 100%; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
 .login-tabs { display: flex; gap: 0; margin-bottom: 24px; background: var(--cinza-claro); border-radius: var(--radius-sm); padding: 4px; }
 .login-tab { flex: 1; padding: 8px; text-align: center; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; border: none; background: none; color: var(--cinza); transition: all 0.2s; }
 .login-tab.ativo { background: var(--azul); color: white; }
@@ -296,6 +313,7 @@ body {
 .campo-perfil-label { font-size: 11px; color: var(--cinza); text-transform: uppercase; letter-spacing: 0.4px; }
 .campo-perfil-valor { font-size: 15px; font-weight: 500; margin-top: 4px; }
 .btn-sair { width: 100%; padding: 14px; background: var(--azul); color: white; border: none; border-radius: 30px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; }
+.btn-secundario { width: 100%; padding: 14px; background: white; color: var(--azul); border: 1.5px solid var(--azul); border-radius: 30px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; }
 
 /* ─── EMPTY STATE ─── */
 .empty { text-align: center; padding: 48px 20px; }
@@ -324,35 +342,34 @@ body {
 <!-- ═══════════════════════════════════ LOGIN ═══════════════════════════════════ -->
 <div id="pLogin" class="page ativa" style="background:var(--azul);min-height:100vh;">
   <div class="login-container">
-    <div class="login-logo">🌿</div>
-    <div class="login-titulo">AgroWA</div>
-    <div class="login-sub">Gestão de Viagens Agroquima</div>
     <div class="login-card">
+      <img src="assets/logo-agroquima.png" alt="Agroquima" class="login-logo-img">
+      <div class="login-sub">Gestão de Despesas e Viagens</div>
       <div class="login-tabs">
         <button class="login-tab ativo" onclick="setLoginTipo('externo')">Representante</button>
         <button class="login-tab" onclick="setLoginTipo('estagio')">Estagiário</button>
         <button class="login-tab" onclick="setLoginTipo('clt')">Colaborador</button>
       </div>
-      <!-- Externo: CNPJ + Telefone -->
+      <!-- Externo: CNPJ + Senha -->
       <div id="loginExterno">
         <div class="form-group">
           <label class="form-label">CNPJ</label>
           <input class="form-input" id="lCnpj" type="tel" placeholder="00.000.000/0001-00" oninput="mascaraCNPJ(this)">
         </div>
         <div class="form-group">
-          <label class="form-label">Telefone</label>
-          <input class="form-input" id="lTelExt" type="tel" placeholder="(00) 00000-0000" oninput="mascaraTel(this)">
+          <label class="form-label">Senha</label>
+          <input class="form-input" id="lSenhaExt" type="password" placeholder="••••••••">
         </div>
       </div>
-      <!-- Estagiário: CPF + Telefone -->
+      <!-- Estagiário: CPF + Senha -->
       <div id="loginEstagio" style="display:none">
         <div class="form-group">
           <label class="form-label">CPF</label>
           <input class="form-input" id="lCpf" type="tel" placeholder="000.000.000-00" oninput="mascaraCPF(this)">
         </div>
         <div class="form-group">
-          <label class="form-label">Telefone</label>
-          <input class="form-input" id="lTelEst" type="tel" placeholder="(00) 00000-0000" oninput="mascaraTel(this)">
+          <label class="form-label">Senha</label>
+          <input class="form-input" id="lSenhaEst" type="password" placeholder="••••••••">
         </div>
       </div>
       <!-- CLT: E-mail + Senha -->
@@ -366,7 +383,11 @@ body {
           <input class="form-input" id="lSenha" type="password" placeholder="••••••••">
         </div>
       </div>
-      <button class="btn-primario" onclick="fazerLogin()" style="margin-top:8px">Entrar</button>
+      <button class="btn-primario" id="btnEntrar" onclick="fazerLogin()" style="margin-top:8px">Entrar</button>
+      <div style="display:flex;justify-content:space-between;margin-top:14px">
+        <a href="#" onclick="abrirPrimeiroAcesso();return false" style="font-size:12px;color:var(--azul-claro);font-weight:600;text-decoration:none">Primeiro acesso</a>
+        <a href="#" onclick="abrirEsqueciSenha();return false" style="font-size:12px;color:var(--cinza);text-decoration:none">Esqueci minha senha</a>
+      </div>
     </div>
   </div>
 </div>
@@ -385,7 +406,7 @@ body {
     <div class="header">
       <div class="header-row">
         <div>
-          <div class="header h1" style="font-size:20px;font-weight:800;color:white">AgroWA</div>
+          <div class="header h1" style="font-size:20px;font-weight:800;color:white;letter-spacing:0.4px">AGROQUIMA</div>
           <div class="header-sub" id="hSubFinanceiro">Últimos 30 dias</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
@@ -505,6 +526,8 @@ body {
       <div class="campo-perfil"><div class="campo-perfil-label">E-mail</div><div class="campo-perfil-valor" id="perfilEmail">joao.mendes@agroquima.com.br</div></div>
       <div class="campo-perfil"><div class="campo-perfil-label">Filial</div><div class="campo-perfil-valor" id="perfilFilial">Administração - GO (ADM)</div></div>
       <div class="campo-perfil"><div class="campo-perfil-label">Tipo de acesso</div><div class="campo-perfil-valor" id="perfilTipo">Colaborador CLT</div></div>
+      <div class="campo-perfil"><div class="campo-perfil-label">Termo de uso aceito em</div><div class="campo-perfil-valor" id="perfilTermoData">—</div></div>
+      <button class="btn-secundario" onclick="abrirAlterarSenha()">Alterar senha</button>
       <button class="btn-sair" onclick="fazerLogout()">Sair</button>
       <div style="height:20px"></div>
     </div>
@@ -611,6 +634,7 @@ body {
             <div class="upload-limite">Não exceda 50MB</div>
           </div>
           <input type="file" id="fileInput" accept="image/*,application/pdf" style="display:none" onchange="arquivoSelecionado(this)">
+          <div id="ocrStatus"></div>
         </div>
         <div class="checkbox-row mt16">
           <input type="checkbox" id="dNFMao">
@@ -718,11 +742,155 @@ body {
   </div>
 </div>
 
+<!-- ═══════════ MODAL PRIMEIRO ACESSO ═══════════ -->
+<div class="modal-overlay" id="modalPrimeiroAcesso">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <button onclick="fecharModal('modalPrimeiroAcesso')" style="background:none;border:none;font-size:20px;color:var(--cinza);cursor:pointer">←</button>
+      <div class="modal-titulo">Primeiro acesso</div>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--azul-bg);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:var(--azul-medio);margin-bottom:16px">
+        Para criar sua senha, seu CNPJ/CPF/e-mail precisa já estar pré-cadastrado na base da Agroquima. Caso não esteja, contate o RH/TI.
+      </div>
+      <div class="login-tabs">
+        <button class="login-tab ativo" onclick="setPrimeiroAcessoTipo('representante')">Representante</button>
+        <button class="login-tab" onclick="setPrimeiroAcessoTipo('estagiario')">Estagiário</button>
+        <button class="login-tab" onclick="setPrimeiroAcessoTipo('clt')">Colaborador</button>
+      </div>
+
+      <div id="paPasso1">
+        <div class="form-group">
+          <label class="form-label" id="paLabelId">CNPJ</label>
+          <input class="form-input" id="paIdentificador" type="text" placeholder="00.000.000/0001-00">
+        </div>
+        <div id="paErro1" style="display:none;color:var(--vermelho);font-size:12px;margin-bottom:12px"></div>
+        <button class="btn-primario" onclick="verificarCadastroPrimeiroAcesso()">Verificar cadastro</button>
+      </div>
+
+      <div id="paPasso2" style="display:none">
+        <div class="form-group">
+          <label class="form-label">Nova senha</label>
+          <input class="form-input" id="paSenha1" type="password" placeholder="Mínimo 4 caracteres">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirmar senha</label>
+          <input class="form-input" id="paSenha2" type="password" placeholder="Repita a senha">
+        </div>
+        <div id="paErro2" style="display:none;color:var(--vermelho);font-size:12px;margin-bottom:12px"></div>
+        <button class="btn-primario" onclick="criarSenhaPrimeiroAcesso()">Criar senha e entrar</button>
+      </div>
+    </div>
+    <div style="height:12px"></div>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL ESQUECI SENHA ═══════════ -->
+<div class="modal-overlay" id="modalEsqueciSenha">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <button onclick="fecharModal('modalEsqueciSenha')" style="background:none;border:none;font-size:20px;color:var(--cinza);cursor:pointer">←</button>
+      <div class="modal-titulo">Esqueci minha senha</div>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:14px;color:var(--texto-suave);line-height:1.5">
+        Por segurança, a redefinição de senha precisa ser validada pela equipe da Agroquima. Entre em contato com o RH/TI informando seu CNPJ, CPF ou e-mail corporativo de cadastro para receber uma nova senha.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primario" onclick="fecharModal('modalEsqueciSenha')">Entendi</button>
+    </div>
+    <div style="height:12px"></div>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL TERMO DE USO ═══════════ -->
+<div class="modal-overlay" id="modalTermoUso" style="z-index:600">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-titulo">Termo de Uso</div>
+    </div>
+    <div class="modal-body">
+      <div style="max-height:46vh;overflow-y:auto;font-size:13px;color:var(--texto-suave);line-height:1.6;border:1px solid var(--borda);border-radius:var(--radius-sm);padding:14px">
+        <p><strong>Aviso:</strong> este é um texto inicial, redigido para fins operacionais e sujeito à revisão do departamento jurídico da Agroquima.</p>
+        <p style="margin-top:10px">Este aplicativo é uma ferramenta de apoio para registro e organização de despesas de viagem e de atividades/agenda, com a finalidade de facilitar a prestação de contas e a comunicação com a Agroquima.</p>
+        <p style="margin-top:10px">O uso deste aplicativo — incluindo o registro de despesas, anexos de notas fiscais e o preenchimento de agenda/atividades — não cria, não amplia e não substitui qualquer vínculo contratual entre o usuário e a Agroquima, e não configura, por si só, vínculo empregatício, subordinação, controle de jornada, exclusividade ou qualquer relação de emprego entre as partes, sendo a relação entre o usuário e a Agroquima regida exclusivamente pelo contrato/acordo já firmado entre eles (representação comercial autônoma, estágio ou contrato de trabalho CLT, conforme o caso).</p>
+        <p style="margin-top:10px">As informações e documentos (incluindo fotos e PDFs de notas fiscais) enviados pelo usuário são utilizados exclusivamente para fins de controle interno, conferência e reembolso de despesas, podendo passar por leitura automática (OCR) para auxiliar na conferência de dados da nota fiscal.</p>
+        <p style="margin-top:10px">O usuário é responsável pela veracidade das informações e documentos enviados. A identificação de itens não permitidos pela política de despesas (ex.: bebidas alcoólicas, cigarros/tabaco) não impede o registro da despesa, mas gera um alerta para análise pela Agroquima.</p>
+        <p style="margin-top:10px">O fechamento de uma despesa no sistema interno da Agroquima (Intra) depende de autorização expressa do usuário através deste aplicativo.</p>
+      </div>
+      <div class="checkbox-row mt16">
+        <input type="checkbox" id="termoCheckbox" onchange="document.getElementById('btnAceitarTermo').disabled = !this.checked">
+        <label for="termoCheckbox">Li e aceito os termos de uso acima.</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primario" id="btnAceitarTermo" onclick="aceitarTermoUso()" disabled>Aceitar e continuar</button>
+    </div>
+    <div style="height:12px"></div>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL ALTERAR SENHA ═══════════ -->
+<div class="modal-overlay" id="modalAlterarSenha">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <button onclick="fecharModal('modalAlterarSenha')" style="background:none;border:none;font-size:20px;color:var(--cinza);cursor:pointer">←</button>
+      <div class="modal-titulo">Alterar senha</div>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Senha atual</label>
+        <input class="form-input" id="asSenhaAtual" type="password" placeholder="••••••••">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nova senha</label>
+        <input class="form-input" id="asSenhaNova1" type="password" placeholder="Mínimo 4 caracteres">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirmar nova senha</label>
+        <input class="form-input" id="asSenhaNova2" type="password" placeholder="Repita a nova senha">
+      </div>
+      <div id="asErro" style="display:none;color:var(--vermelho);font-size:12px;margin-bottom:8px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primario" onclick="salvarNovaSenha()">Salvar nova senha</button>
+    </div>
+    <div style="height:12px"></div>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL AUTORIZAR FECHAMENTO DE DESPESA ═══════════ -->
+<div class="modal-overlay" id="modalFecharDespesa">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <button onclick="fecharModal('modalFecharDespesa')" style="background:none;border:none;font-size:20px;color:var(--cinza);cursor:pointer">←</button>
+      <div class="modal-titulo">Autorizar fechamento</div>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:14px;color:var(--texto);line-height:1.5">
+        Ao confirmar, você autoriza que esta despesa (<strong id="fdNumeroNF"></strong>) seja fechada no sistema interno da Agroquima (Intra). Sem essa autorização, o Intra não deve concluir o fechamento desta despesa.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primario" onclick="confirmarFechamentoDespesa()">Autorizar fechamento</button>
+    </div>
+    <div style="height:12px"></div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <!-- ═══════════════════════════════════ SCRIPTS ═══════════════════════════════════ -->
 <script src="dados-brasil.js"></script>
+<script src="api.js"></script>
+<script src="ocr.js"></script>
 <script>
 // ─── ESTADO GLOBAL ───
 let USUARIO = null;
@@ -734,6 +902,11 @@ let IS_ONLINE = navigator.onLine;
 let CAL_MES = new Date().getMonth();
 let CAL_ANO = new Date().getFullYear();
 let DIA_SELECIONADO = new Date();
+let OCR_ARQUIVO_ATUAL = null;
+let OCR_RESULTADO_ATUAL = null;
+let PA_TIPO = 'representante';
+let PA_IDENTIFICADOR_VERIFICADO = null;
+let DESPESA_FECHAR_ID = null;
 
 // ─── SERVICE WORKER ───
 if ('serviceWorker' in navigator) {
@@ -760,16 +933,27 @@ function atualizarStatusOnline() {
 }
 
 // ─── INICIALIZAÇÃO ───
+// Chaves de dados (despesas/atividades/pendentes) são namespaced por usuário logado,
+// para que cada conta tenha seu próprio cache local no aparelho.
+function chaveDados(sufixo) {
+  const id = USUARIO?.identificador ? chaveLimpa(USUARIO.identificador) : 'anon';
+  return `agroquima_${sufixo}_${id}`;
+}
+
 function init() {
-  const u = localStorage.getItem('agrowa_usuario');
+  const u = localStorage.getItem('agroquima_usuario');
   if (u) {
     USUARIO = JSON.parse(u);
+    carregarDadosUsuario();
     mostrarApp();
   }
-  DESPESAS = JSON.parse(localStorage.getItem('agrowa_despesas') || '[]');
-  ATIVIDADES = JSON.parse(localStorage.getItem('agrowa_atividades') || '[]');
-  PENDENTES_SYNC = JSON.parse(localStorage.getItem('agrowa_pendentes') || '[]');
   atualizarStatusOnline();
+}
+
+function carregarDadosUsuario() {
+  DESPESAS = JSON.parse(localStorage.getItem(chaveDados('despesas')) || '[]');
+  ATIVIDADES = JSON.parse(localStorage.getItem(chaveDados('atividades')) || '[]');
+  PENDENTES_SYNC = JSON.parse(localStorage.getItem(chaveDados('pendentes')) || '[]');
   popularDados_mockados_se_vazio();
 }
 
@@ -794,35 +978,51 @@ function setLoginTipo(tipo) {
   document.getElementById('loginClt').style.display = tipo === 'clt' ? '' : 'none';
 }
 
-function fazerLogin() {
-  // Mock: aceita qualquer entrada com valor mínimo
-  let valido = false;
-  let perfil = {};
+function tipoApiDoLogin(tipo) {
+  return { externo: 'representante', estagio: 'estagiario', clt: 'clt' }[tipo];
+}
+
+async function fazerLogin() {
+  const tipoApi = tipoApiDoLogin(loginTipo);
+  let identificador, senha;
 
   if (loginTipo === 'externo') {
-    const cnpj = document.getElementById('lCnpj').value;
-    const tel = document.getElementById('lTelExt').value;
-    valido = cnpj.length >= 14 && tel.length >= 10;
-    perfil = { tipo: 'representante', nome: 'Representante', identificador: cnpj, tel };
+    identificador = document.getElementById('lCnpj').value;
+    senha = document.getElementById('lSenhaExt').value;
   } else if (loginTipo === 'estagio') {
-    const cpf = document.getElementById('lCpf').value;
-    const tel = document.getElementById('lTelEst').value;
-    valido = cpf.length >= 11 && tel.length >= 10;
-    perfil = { tipo: 'estagiario', nome: 'Estagiário', identificador: cpf, tel };
+    identificador = document.getElementById('lCpf').value;
+    senha = document.getElementById('lSenhaEst').value;
   } else {
-    const email = document.getElementById('lEmail').value;
-    const senha = document.getElementById('lSenha').value;
-    valido = email.includes('@agroquima') && senha.length >= 4;
-    // Mock: detecta gestor/gerente pelo email
-    const isGestor = email.includes('gerente') || email.includes('gestor') || email.includes('aprovador');
-    perfil = { tipo: isGestor ? 'gestor' : 'clt', nome: email.split('@')[0], email, cargo: isGestor ? 'Gerente' : 'Auditor' };
+    identificador = document.getElementById('lEmail').value;
+    senha = document.getElementById('lSenha').value;
   }
 
-  if (!valido) { mostrarToast('Verifique os dados informados'); return; }
+  if (!identificador || !senha) { mostrarToast('Informe seu identificador e senha'); return; }
 
-  USUARIO = perfil;
-  localStorage.setItem('agrowa_usuario', JSON.stringify(USUARIO));
-  mostrarApp();
+  const btn = document.getElementById('btnEntrar');
+  btn.disabled = true; btn.textContent = 'Entrando...';
+  try {
+    const resp = await AUTH_API.login(identificador, senha, tipoApi);
+    const conta = resp.perfil || {};
+    // Mock: detecta gestor/gerente pelo identificador (e-mail)
+    const isGestor = tipoApi === 'clt' && (identificador.includes('gerente') || identificador.includes('gestor') || identificador.includes('aprovador'));
+    USUARIO = {
+      tipo: isGestor ? 'gestor' : tipoApi,
+      identificador,
+      nome: conta.nome || (tipoApi === 'clt' ? identificador.split('@')[0] : (tipoApi === 'representante' ? 'Representante' : 'Estagiário')),
+      email: tipoApi === 'clt' ? identificador : (conta.email || ''),
+      cargo: conta.cargo || (isGestor ? 'Gerente' : (tipoApi === 'clt' ? 'Auditor' : undefined)),
+      filial: conta.filial,
+      criadoEm: conta.criadoEm
+    };
+    localStorage.setItem('agroquima_usuario', JSON.stringify(USUARIO));
+    carregarDadosUsuario();
+    mostrarApp();
+  } catch (e) {
+    mostrarToast(e.message || 'Não foi possível entrar');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Entrar';
+  }
 }
 
 function mostrarApp() {
@@ -836,10 +1036,11 @@ function mostrarApp() {
   renderizarReps();
   popularSelects();
   preencherHoje();
+  verificarTermoUso();
 }
 
 function fazerLogout() {
-  localStorage.removeItem('agrowa_usuario');
+  localStorage.removeItem('agroquima_usuario');
   USUARIO = null;
   document.getElementById('pLogin').style.display = '';
   document.getElementById('appWrapper').style.display = 'none';
@@ -856,6 +1057,148 @@ function configurarPerfil() {
   document.getElementById('perfilEmail').textContent = USUARIO.email || USUARIO.identificador || '—';
   document.getElementById('perfilFilial').textContent = USUARIO.filial || 'Administração - GO (ADM)';
   document.getElementById('perfilTipo').textContent = { representante:'Representante (PJ)', estagiario:'Estagiário', clt:'Colaborador CLT', gestor:'Gestor / Gerente' }[USUARIO.tipo] || USUARIO.tipo;
+  const termo = localStorage.getItem(chaveDados('termo'));
+  document.getElementById('perfilTermoData').textContent = termo ? new Date(termo).toLocaleDateString('pt-BR') : '—';
+}
+
+// ─── PRIMEIRO ACESSO (cadastro de senha, exige pré-cadastro na base Agroquima) ───
+function abrirPrimeiroAcesso() {
+  document.getElementById('paPasso1').style.display = '';
+  document.getElementById('paPasso2').style.display = 'none';
+  document.getElementById('paIdentificador').value = '';
+  document.getElementById('paSenha1').value = '';
+  document.getElementById('paSenha2').value = '';
+  esconderErro('paErro1'); esconderErro('paErro2');
+  setPrimeiroAcessoTipo('representante');
+  document.getElementById('modalPrimeiroAcesso').classList.add('aberto');
+}
+
+function setPrimeiroAcessoTipo(tipo) {
+  PA_TIPO = tipo;
+  document.querySelectorAll('#modalPrimeiroAcesso .login-tab').forEach((t,i) => {
+    t.classList.toggle('ativo', ['representante','estagiario','clt'][i] === tipo);
+  });
+  const labels = { representante: 'CNPJ', estagiario: 'CPF', clt: 'E-mail corporativo' };
+  const placeholders = { representante: '00.000.000/0001-00', estagiario: '000.000.000-00', clt: 'nome@agroquima.com.br' };
+  document.getElementById('paLabelId').textContent = labels[tipo];
+  document.getElementById('paIdentificador').placeholder = placeholders[tipo];
+}
+
+async function verificarCadastroPrimeiroAcesso() {
+  const identificador = document.getElementById('paIdentificador').value;
+  esconderErro('paErro1');
+  if (!identificador) { mostrarErro('paErro1', 'Informe seu identificador de cadastro.'); return; }
+  try {
+    const resp = await AUTH_API.verificarCadastro(identificador, PA_TIPO);
+    if (!resp.encontrado) {
+      mostrarErro('paErro1', 'Identificador não encontrado na base da Agroquima. Contate o RH/TI.');
+      return;
+    }
+    if (resp.jaTemSenha) {
+      mostrarErro('paErro1', 'Você já possui senha cadastrada. Use a tela de login ou "Esqueci minha senha".');
+      return;
+    }
+    PA_IDENTIFICADOR_VERIFICADO = identificador;
+    document.getElementById('paPasso1').style.display = 'none';
+    document.getElementById('paPasso2').style.display = '';
+  } catch (e) {
+    mostrarErro('paErro1', e.message || 'Não foi possível verificar o cadastro.');
+  }
+}
+
+async function criarSenhaPrimeiroAcesso() {
+  const senha1 = document.getElementById('paSenha1').value;
+  const senha2 = document.getElementById('paSenha2').value;
+  esconderErro('paErro2');
+  if (senha1.length < 4) { mostrarErro('paErro2', 'A senha deve ter ao menos 4 caracteres.'); return; }
+  if (senha1 !== senha2) { mostrarErro('paErro2', 'As senhas não coincidem.'); return; }
+  try {
+    await AUTH_API.criarSenha(PA_IDENTIFICADOR_VERIFICADO, PA_TIPO, senha1);
+    fecharModal('modalPrimeiroAcesso');
+    mostrarToast('✓ Senha criada com sucesso! Faça login para continuar.');
+    preencherIdentificadorNoLogin(PA_TIPO, PA_IDENTIFICADOR_VERIFICADO);
+  } catch (e) {
+    mostrarErro('paErro2', e.message || 'Não foi possível criar a senha.');
+  }
+}
+
+function preencherIdentificadorNoLogin(tipo, identificador) {
+  const mapaTab = { representante: 'externo', estagiario: 'estagio', clt: 'clt' };
+  setLoginTipo(mapaTab[tipo]);
+  if (tipo === 'representante') document.getElementById('lCnpj').value = identificador;
+  else if (tipo === 'estagiario') document.getElementById('lCpf').value = identificador;
+  else document.getElementById('lEmail').value = identificador;
+}
+
+function mostrarErro(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.style.display = ''; }
+function esconderErro(id) { const el = document.getElementById(id); el.style.display = 'none'; }
+
+// ─── ESQUECI SENHA ───
+function abrirEsqueciSenha() {
+  document.getElementById('modalEsqueciSenha').classList.add('aberto');
+}
+
+// ─── TERMO DE USO ───
+function verificarTermoUso() {
+  if (!localStorage.getItem(chaveDados('termo'))) {
+    document.getElementById('modalTermoUso').classList.add('aberto');
+  }
+}
+
+function aceitarTermoUso() {
+  localStorage.setItem(chaveDados('termo'), new Date().toISOString());
+  fecharModal('modalTermoUso');
+  configurarPerfil();
+}
+
+// ─── ALTERAR SENHA ───
+function abrirAlterarSenha() {
+  document.getElementById('asSenhaAtual').value = '';
+  document.getElementById('asSenhaNova1').value = '';
+  document.getElementById('asSenhaNova2').value = '';
+  esconderErro('asErro');
+  document.getElementById('modalAlterarSenha').classList.add('aberto');
+}
+
+async function salvarNovaSenha() {
+  const atual = document.getElementById('asSenhaAtual').value;
+  const nova1 = document.getElementById('asSenhaNova1').value;
+  const nova2 = document.getElementById('asSenhaNova2').value;
+  esconderErro('asErro');
+  if (nova1.length < 4) { mostrarErro('asErro', 'A nova senha deve ter ao menos 4 caracteres.'); return; }
+  if (nova1 !== nova2) { mostrarErro('asErro', 'As senhas não coincidem.'); return; }
+  try {
+    await AUTH_API.alterarSenha(USUARIO.identificador, atual, nova1);
+    fecharModal('modalAlterarSenha');
+    mostrarToast('✓ Senha alterada com sucesso');
+  } catch (e) {
+    mostrarErro('asErro', e.message || 'Não foi possível alterar a senha.');
+  }
+}
+
+// ─── AUTORIZAÇÃO DE FECHAMENTO (consentimento do app para o Intra fechar a despesa) ───
+function abrirConfirmarFechamento(id) {
+  DESPESA_FECHAR_ID = id;
+  const d = DESPESAS.find(x => x.id === id);
+  document.getElementById('fdNumeroNF').textContent = d ? ('NF ' + (d.nf || '—')) : '';
+  document.getElementById('modalFecharDespesa').classList.add('aberto');
+}
+
+async function confirmarFechamentoDespesa() {
+  if (!DESPESA_FECHAR_ID) return;
+  try {
+    await DESPESAS_API.autorizarFechamento(DESPESA_FECHAR_ID, USUARIO?.identificador);
+    DESPESAS = DESPESAS.map(d => d.id === DESPESA_FECHAR_ID
+      ? { ...d, fechamentoAutorizadoPeloUsuario: true, fechamentoAutorizadoEm: new Date().toISOString() }
+      : d);
+    salvarDespesas();
+    renderizarDespesas();
+    fecharModal('modalFecharDespesa');
+    mostrarToast('🔒 Fechamento autorizado');
+  } catch (e) {
+    mostrarToast(e.message || 'Não foi possível registrar a autorização');
+  }
+  DESPESA_FECHAR_ID = null;
 }
 
 function configurarNav() {
@@ -923,6 +1266,9 @@ function cardDespesa(d) {
   const labels = { analise:'Em Análise', aprovada:'Aprovada', reprovada:'Reprovada', pendente:'Aguardando Sync' };
   const b = badges[d.status] || 'badge-analise';
   const l = labels[d.status] || 'Em Análise';
+  const alertaHtml = (txt) => `<div style="background:#FEF3C7;color:#92400E;font-size:11px;font-weight:600;border-radius:var(--radius-sm);padding:6px 10px;margin-top:8px">⚠️ ${txt}</div>`;
+  const temItemProibido = (d.itensProibidosDetectados || []).length > 0;
+  const podeAutorizarFechamento = d.status !== 'reprovada' && !d.fechamentoAutorizadoPeloUsuario;
   return `
     <div class="card" style="margin-bottom:10px">
       <div class="card-header">
@@ -943,11 +1289,17 @@ function cardDespesa(d) {
           <div class="card-tipo">${d.tipo}</div>
           <span class="badge ${b}">${l}</span>
         </div>
+        ${temItemProibido ? alertaHtml('Item proibido identificado na nota: ' + d.itensProibidosDetectados.join(', ')) : ''}
+        ${d.leituraOcrInsuficiente ? alertaHtml('Leitura automática da nota insuficiente — confira os dados manualmente') : ''}
+        ${d.numeroNfDivergente ? alertaHtml('Número da nota digitado diverge do identificado na imagem') : ''}
         <div class="card-info">
           <span>📅 ${d.data}</span>
           <span>📍 ${d.municipio} - ${d.uf}</span>
           <span style="margin-left:auto;font-weight:700;color:var(--texto);font-size:14px">R$ ${(d.valor||0).toFixed(2).replace('.',',')}</span>
         </div>
+        ${podeAutorizarFechamento
+          ? `<div class="card-row mt8" style="justify-content:flex-end"><button onclick="abrirConfirmarFechamento('${d.id}')" style="background:none;border:none;font-size:11px;color:var(--cinza);text-decoration:underline;cursor:pointer">Autorizar fechamento</button></div>`
+          : (d.fechamentoAutorizadoPeloUsuario ? `<div class="card-row mt8" style="justify-content:flex-end"><span style="font-size:11px;color:var(--verde);font-weight:600">🔒 Fechamento autorizado</span></div>` : '')}
       </div>
     </div>`;
 }
@@ -992,6 +1344,9 @@ function limparFormDespesa() {
   document.getElementById('dMunicipio').value = '';
   document.getElementById('dNFMao').checked = false;
   document.getElementById('uploadArea').innerHTML = `<div class="upload-icon">📄</div><div class="upload-txt"><span class="upload-btn-txt">Carregar foto ou arquivo</span></div><div class="upload-limite">Não exceda 50MB</div>`;
+  document.getElementById('ocrStatus').innerHTML = '';
+  OCR_ARQUIVO_ATUAL = null;
+  OCR_RESULTADO_ATUAL = null;
   document.getElementById('dData').value = hojeFormatado();
 }
 
@@ -1023,6 +1378,7 @@ function atualizarStep() {
 }
 
 function salvarDespesa() {
+  const ocr = OCR_RESULTADO_ATUAL;
   const despesa = {
     id: gerarId(),
     tipo: document.getElementById('dTipo').value,
@@ -1036,7 +1392,12 @@ function salvarDespesa() {
     nfMao: document.getElementById('dNFMao').checked,
     status: IS_ONLINE ? 'analise' : 'pendente',
     sync: IS_ONLINE,
-    criadoEm: new Date().toISOString()
+    criadoEm: new Date().toISOString(),
+    chaveAcessoNF: ocr?.chaveAcesso || null,
+    itensProibidosDetectados: ocr?.itensDetectados || [],
+    leituraOcrInsuficiente: !!ocr?.leituraInsuficiente,
+    numeroNfDivergente: !!ocr?.numeroDivergente,
+    fechamentoAutorizadoPeloUsuario: false
   };
 
   DESPESAS.unshift(despesa);
@@ -1044,7 +1405,7 @@ function salvarDespesa() {
 
   if (!IS_ONLINE) {
     PENDENTES_SYNC.push(despesa.id);
-    localStorage.setItem('agrowa_pendentes', JSON.stringify(PENDENTES_SYNC));
+    localStorage.setItem(chaveDados('pendentes'), JSON.stringify(PENDENTES_SYNC));
   }
 
   fecharModal('modalDespesa');
@@ -1064,7 +1425,7 @@ async function sincronizarPendentes() {
   });
   PENDENTES_SYNC = [];
   salvarDespesas();
-  localStorage.setItem('agrowa_pendentes', JSON.stringify([]));
+  localStorage.setItem(chaveDados('pendentes'), JSON.stringify([]));
   document.getElementById('syncBanner').classList.remove('visivel');
   renderizarDespesas();
   mostrarToast('✓ Lançamentos sincronizados');
@@ -1096,7 +1457,7 @@ function salvarAtividade() {
   };
   if (!ativ.tipo) { mostrarToast('Selecione o tipo de atividade'); return; }
   ATIVIDADES.unshift(ativ);
-  localStorage.setItem('agrowa_atividades', JSON.stringify(ATIVIDADES));
+  localStorage.setItem(chaveDados('atividades'), JSON.stringify(ATIVIDADES));
   fecharModal('modalAtividade');
   renderizarCalendario();
   renderizarAtividades();
@@ -1277,13 +1638,6 @@ function mascaraCPF(el) {
   el.value = v;
 }
 
-function mascaraTel(el) {
-  let v = el.value.replace(/\D/g,'').slice(0,11);
-  if (v.length > 6) v = v.replace(/(\d{2})(\d{4,5})(\d{4})/,'($1) $2-$3');
-  else if (v.length > 2) v = v.replace(/(\d{2})(\d*)/,'($1) $2');
-  el.value = v;
-}
-
 function mascaraData(el) {
   let v = el.value.replace(/\D/g,'').slice(0,8);
   if (v.length > 4) v = v.replace(/(\d{2})(\d{2})(\d*)/,'$1/$2/$3');
@@ -1302,14 +1656,42 @@ function mascaraHora(el) {
   el.value = v;
 }
 
-// ─── UPLOAD ───
+// ─── UPLOAD + OCR ───
 function triggerUpload() { document.getElementById('fileInput').click(); }
 function arquivoSelecionado(input) {
   if (input.files && input.files[0]) {
-    const nome = input.files[0].name;
+    const file = input.files[0];
     document.getElementById('uploadArea').classList.add('com-arquivo');
-    document.getElementById('uploadArea').innerHTML = `<div class="upload-icon">✅</div><div class="upload-txt" style="color:var(--verde);font-weight:600">${nome}</div><div class="upload-limite">Arquivo selecionado</div>`;
+    document.getElementById('uploadArea').innerHTML = `<div class="upload-icon">✅</div><div class="upload-txt" style="color:var(--verde);font-weight:600">${file.name}</div><div class="upload-limite">Arquivo selecionado</div>`;
+    analisarNotaAnexada(file);
   }
+}
+
+async function analisarNotaAnexada(file) {
+  OCR_ARQUIVO_ATUAL = file;
+  OCR_RESULTADO_ATUAL = null;
+  const status = document.getElementById('ocrStatus');
+  status.innerHTML = `<div style="font-size:12px;color:var(--cinza);display:flex;align-items:center;gap:6px;margin-top:8px"><span class="spin">⟳</span> Analisando nota fiscal...</div>`;
+  const numeroNF = document.getElementById('dNF').value;
+  const resultado = await analisarNotaFiscal(file, numeroNF);
+  OCR_RESULTADO_ATUAL = resultado;
+  renderizarStatusOCR(resultado);
+}
+
+function renderizarStatusOCR(r) {
+  const status = document.getElementById('ocrStatus');
+  if (!r) { status.innerHTML = ''; return; }
+  const alertas = [];
+  if (r.erro) {
+    alertas.push({ msg: r.mensagem, ok: false });
+  } else {
+    if (r.chaveAcesso) alertas.push({ msg: `Chave de acesso identificada: ${r.chaveAcesso}`, ok: true });
+    if (r.itensDetectados && r.itensDetectados.length) alertas.push({ msg: `Item(ns) potencialmente proibido(s) identificado(s): ${r.itensDetectados.join(', ')}. A despesa será aceita, mas marcada para revisão.`, ok: false });
+    if (r.leituraInsuficiente) alertas.push({ msg: 'Não foi possível ler os dados da nota com confiança. Confira manualmente.', ok: false });
+    if (r.numeroDivergente) alertas.push({ msg: `O número da nota digitado não corresponde ao identificado na imagem (nº ${r.numeroDetectado}).`, ok: false });
+    if (!alertas.length) alertas.push({ msg: 'Nota lida sem alertas.', ok: true });
+  }
+  status.innerHTML = alertas.map(a => `<div style="font-size:11px;font-weight:600;border-radius:var(--radius-sm);padding:6px 10px;margin-top:6px;background:${a.ok?'#DCFCE7':'#FEF3C7'};color:${a.ok?'#14532D':'#92400E'}">${a.ok?'✓':'⚠️'} ${a.msg}</div>`).join('');
 }
 
 // ─── FILTROS ───
@@ -1326,7 +1708,7 @@ function aplicarFiltros() {
 // ─── UTILS ───
 function fecharModal(id) { document.getElementById(id).classList.remove('aberto'); }
 function gerarId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
-function salvarDespesas() { localStorage.setItem('agrowa_despesas', JSON.stringify(DESPESAS)); }
+function salvarDespesas() { localStorage.setItem(chaveDados('despesas'), JSON.stringify(DESPESAS)); }
 function toggleInfo(id) { const el = document.getElementById(id); el.style.display = el.style.display === 'none' ? '' : 'none'; }
 function preencherHoje() {
   const h = hojeFormatado();
