@@ -27,7 +27,7 @@
 // do ADV é sempre feita no Intra (nunca pelo app), que então envia pro app:
 //   numeroADV     <- "Numero ADV" do Intra (ex: 635282) — não existe ainda no app
 //   filial        <- código real da filial, formato "NN-SIGLA" (ex: "21-MOZ"; ver FILIAIS
-//                    em dados-brasil.js, já alinhado com os 38 códigos reais do Intra)
+//                    em dados-brasil.js, já alinhado com as 30 filiais reais da base de regionais)
 //   parceiro      <- "Parceiro" do Intra (ex: "37675 - THIAGO PEREIRA VAZ")
 //   valorAbertura <- "Valor" do Intra; substitui o mock ADV_VALOR_ADIANTAMENTO (index.html)
 //   statusIntra   <- vocabulário próprio do Intra ("Aberto/Enviado", "Pen. Aprovação
