@@ -969,6 +969,7 @@ let DESPESA_EDITANDO_ID = null;
 let ADV_STATUS = 'aberto';
 let NOTIFICACOES = [];
 let POLL_ATUALIZACOES_ADV = null;
+const ADV_VALOR_ADIANTAMENTO = 1000; // mock — em produção vem do registro de abertura do ADV no Intra
 
 // ─── SERVICE WORKER ───
 if ('serviceWorker' in navigator) {
@@ -1380,19 +1381,37 @@ function verificarConclusaoADV() {
 window._simularDecisaoAdminADV = function (decisoes) { aplicarAtualizacoesDespesas(decisoes); };
 
 // ─── RESUMO FINAL E ASSINATURA DIGITAL DO FECHAMENTO DO ADV ───
+// Campos alinhados ao "Relatório de Despesa de Viagem" já usado hoje pela Agroquima (gerado
+// pelo Intra, enviado por WhatsApp/impresso) — para o PDF final do app ficar no mesmo padrão.
 function gerarResumoADV() {
   const despesas = DESPESAS.filter(d => d.fechamentoAutorizadoPeloUsuario);
   const aprovadas = despesas.filter(d => d.status === 'aprovada');
   const reprovadas = despesas.filter(d => d.status === 'reprovada');
+  const consumidoTotal = DESPESAS.reduce((s, d) => s + (d.valor || 0), 0);
+
+  const porTipo = {};
+  aprovadas.forEach(d => {
+    const t = d.tipo || 'Outros';
+    if (!porTipo[t]) porTipo[t] = { valor: 0, qtd: 0 };
+    porTipo[t].valor += (d.valor || 0);
+    porTipo[t].qtd += 1;
+  });
+
   return {
-    adv: document.getElementById('advNum')?.textContent || '',
+    adv: (document.getElementById('advNum')?.textContent || '').replace('#', ''),
     identificador: USUARIO?.identificador || '',
     nome: USUARIO?.nome || '',
+    cargo: document.getElementById('perfilCargo')?.textContent || '',
+    filial: USUARIO?.filial || '',
+    valorAdiantamento: ADV_VALOR_ADIANTAMENTO,
+    valorConsumido: consumidoTotal,
+    valorDisponivel: ADV_VALOR_ADIANTAMENTO - consumidoTotal,
     geradoEm: new Date().toISOString(),
-    despesas: despesas.map(d => ({
-      id: d.id, nf: d.nf, tipo: d.tipo, data: d.data, municipio: d.municipio, uf: d.uf,
+    despesas: despesas.map((d, i) => ({
+      seq: i + 1, id: d.id, nf: d.nf, tipo: d.tipo, data: d.data, municipio: d.municipio, uf: d.uf,
       valor: d.valor, status: d.status, motivoReprovacao: d.motivoReprovacao || null
     })),
+    porTipo,
     totalAprovado: aprovadas.reduce((s, d) => s + (d.valor || 0), 0),
     totalReprovado: reprovadas.reduce((s, d) => s + (d.valor || 0), 0)
   };
@@ -1420,40 +1439,139 @@ function abrirFinalizacaoADV() {
   document.getElementById('modalFinalizarADV').classList.add('aberto');
 }
 
-// Monta um PDF simples com o resultado do fechamento — usado tanto para o usuário
-// baixar/conferir quanto como comprovante anexado à assinatura digital (respaldo).
+// Monta o PDF do fechamento no mesmo padrão visual do "Relatório de Despesa de Viagem" que a
+// Agroquima já envia hoje por WhatsApp/impresso (gerado pelo Intra) — mesma estrutura de caixas,
+// tabela de despesas e linhas de assinatura, com os dados disponíveis no app. Campos que hoje só
+// existem no Intra (km, veículo, lançamentos contábeis em partida dobrada) não são inventados aqui;
+// ficam para quando a integração real estiver disponível.
+function pdfMoeda(v) { return 'R$ ' + (v || 0).toFixed(2).replace('.', ','); }
+
 async function montarPdfADV(resumo) {
   if (!window.jspdf) await carregarScript('https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js');
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  let y = 16;
-  doc.setFontSize(14);
-  doc.text('ADV AGROQUIMA — Resumo de fechamento', 14, y); y += 8;
-  doc.setFontSize(10);
-  doc.text(`Adiantamento: ${resumo.adv}`, 14, y); y += 6;
-  doc.text(`Colaborador: ${resumo.nome} (${resumo.identificador})`, 14, y); y += 6;
-  doc.text(`Gerado em: ${new Date(resumo.geradoEm).toLocaleString('pt-BR')}`, 14, y); y += 10;
-  resumo.despesas.forEach(d => {
-    if (y > 270) { doc.addPage(); y = 16; }
-    doc.setTextColor(0, 0, 0);
-    doc.text(`NF ${d.nf || '—'} · ${d.tipo} · ${d.data} · R$ ${(d.valor || 0).toFixed(2).replace('.', ',')} · ${d.status === 'aprovada' ? 'Aprovada' : 'Recusada'}`, 14, y);
-    y += 6;
-    if (d.status === 'reprovada') {
-      doc.setTextColor(180, 40, 40);
-      doc.text(`   Motivo: ${d.motivoReprovacao || 'não informado'}`, 14, y);
-      doc.setTextColor(0, 0, 0);
-      y += 6;
-    }
+  const ML = 10, MR = 200, LARGURA = MR - ML;
+  let y = 14;
+
+  // Cabeçalho
+  doc.setFont(undefined, 'bold'); doc.setFontSize(16);
+  doc.text('AGROQUIMA', ML, y);
+  doc.setFontSize(13);
+  doc.text('Relatório de Despesa de Viagem', MR, y, { align: 'right' });
+  y += 3;
+  doc.setLineWidth(0.4); doc.line(ML, y, MR, y);
+  y += 7;
+
+  // Caixa de identificação (Número / Viajante / Cargo-Função / Filial)
+  const caixaTopo = y;
+  doc.setFont(undefined, 'normal'); doc.setFontSize(8);
+  const campo = (label, valor, x, yy) => {
+    doc.setFont(undefined, 'bold'); doc.text(label, x, yy);
+    doc.setFont(undefined, 'normal'); doc.text(String(valor || '—'), x, yy + 4);
+  };
+  campo('Número:', resumo.adv, ML + 2, y + 5);
+  campo('Viajante:', `${resumo.nome} (${resumo.identificador})`, ML + 40, y + 5);
+  campo('Cargo / Função:', resumo.cargo, ML + 130, y + 5);
+  campo('Filial:', resumo.filial, ML + 2, y + 16);
+  campo('Valor do Adiantamento:', pdfMoeda(resumo.valorAdiantamento), ML + 40, y + 16);
+  campo('Gerado em:', new Date(resumo.geradoEm).toLocaleString('pt-BR'), ML + 130, y + 16);
+  y += 24;
+  doc.rect(ML, caixaTopo, LARGURA, y - caixaTopo);
+  doc.line(ML + 38, caixaTopo, ML + 38, y);
+  doc.line(ML + 128, caixaTopo, ML + 128, y);
+  doc.line(ML, caixaTopo + 11, MR, caixaTopo + 11);
+  y += 6;
+
+  // Tabela de despesas
+  const colX = [ML, ML + 12, ML + 34, ML + 64, ML + 84, ML + 124, ML + 154];
+  const linhaHeader = y;
+  doc.setFillColor(230, 230, 230);
+  doc.rect(ML, linhaHeader, LARGURA, 7, 'F');
+  doc.setFont(undefined, 'bold'); doc.setFontSize(8);
+  ['Seq', 'Data', 'Cidade/UF', 'Documento', 'Tipo de Gasto', 'Valor', 'Status'].forEach((titulo, i) => {
+    doc.text(titulo, colX[i] + 1, linhaHeader + 5);
   });
-  y += 4;
-  doc.setFontSize(11);
-  doc.text(`Total aprovado: R$ ${resumo.totalAprovado.toFixed(2).replace('.', ',')}`, 14, y); y += 6;
-  doc.text(`Total recusado: R$ ${resumo.totalReprovado.toFixed(2).replace('.', ',')}`, 14, y); y += 10;
-  if (resumo.assinatura) {
-    doc.setFontSize(9);
-    doc.text(`Assinado digitalmente por ${resumo.assinatura.nome} (${resumo.assinatura.identificador}) em ${new Date(resumo.assinatura.dataHora).toLocaleString('pt-BR')}.`, 14, y); y += 5;
-    doc.text(`Código de verificação: ${resumo.assinatura.hash.slice(0, 16)}`, 14, y);
+  y += 7;
+  doc.setFont(undefined, 'normal');
+
+  if (resumo.despesas.length === 0) {
+    doc.rect(ML, y, LARGURA, 8);
+    doc.text('Nenhuma despesa neste fechamento.', ML + 2, y + 5.5);
+    y += 8;
+  } else {
+    resumo.despesas.forEach(d => {
+      if (y > 265) { doc.addPage(); y = 16; }
+      const alturaLinha = d.status === 'reprovada' ? 11 : 7;
+      doc.rect(ML, y, LARGURA, alturaLinha);
+      doc.text(String(d.seq), colX[0] + 1, y + 5);
+      doc.text(d.data || '—', colX[1] + 1, y + 5);
+      doc.text(`${d.municipio || '—'}-${d.uf || ''}`, colX[2] + 1, y + 5);
+      doc.text(`NF ${d.nf || '—'}`, colX[3] + 1, y + 5);
+      doc.text(d.tipo || '—', colX[4] + 1, y + 5);
+      doc.text(pdfMoeda(d.valor), colX[5] + 1, y + 5);
+      if (d.status === 'reprovada') doc.setTextColor(180, 40, 40); else doc.setTextColor(20, 130, 60);
+      doc.text(d.status === 'reprovada' ? 'Recusada' : 'Aprovada', colX[6] + 1, y + 5);
+      doc.setTextColor(0, 0, 0);
+      if (d.status === 'reprovada') {
+        doc.setFontSize(7);
+        doc.text(`Motivo: ${d.motivoReprovacao || 'não informado'}`, colX[2] + 1, y + 9);
+        doc.setFontSize(8);
+      }
+      y += alturaLinha;
+    });
   }
+  y += 8;
+
+  // Resumo dos gastos
+  doc.setFont(undefined, 'bold'); doc.setFontSize(9);
+  doc.text('RESUMO DOS GASTOS', ML, y); y += 2;
+  const resumoTopo = y;
+  doc.setFont(undefined, 'normal'); doc.setFontSize(8);
+  const tipos = Object.entries(resumo.porTipo);
+  tipos.forEach(([tipo, info], i) => {
+    doc.text(`${tipo}:`, ML + 2, y + 5 + i * 5);
+    doc.text(`${pdfMoeda(info.valor)}  (${info.qtd} item${info.qtd > 1 ? 's' : ''})`, ML + 60, y + 5 + i * 5);
+  });
+  const baseY = y + 5 + Math.max(tipos.length, 1) * 5;
+  doc.setFont(undefined, 'bold');
+  doc.text('Total aprovado:', ML + 2, baseY);
+  doc.setTextColor(20, 130, 60); doc.text(pdfMoeda(resumo.totalAprovado), ML + 60, baseY); doc.setTextColor(0, 0, 0);
+  doc.text('Total recusado:', ML + 2, baseY + 5);
+  doc.setTextColor(180, 40, 40); doc.text(pdfMoeda(resumo.totalReprovado), ML + 60, baseY + 5); doc.setTextColor(0, 0, 0);
+  doc.text('Saldo disponível do adiantamento:', ML + 110, baseY);
+  doc.text(pdfMoeda(resumo.valorDisponivel), MR - 2, baseY, { align: 'right' });
+  y = baseY + 9;
+  doc.rect(ML, resumoTopo, LARGURA, y - resumoTopo);
+  y += 10;
+
+  // Assinaturas
+  if (y > 250) { doc.addPage(); y = 16; }
+  doc.setFontSize(8);
+  doc.text(new Date(resumo.geradoEm).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }), ML, y);
+  y += 14;
+  const meioX = ML + LARGURA / 2;
+  doc.line(ML, y, meioX - 5, y);
+  doc.line(meioX + 5, y, MR, y);
+  y += 4;
+  doc.setFont(undefined, 'bold');
+  doc.text('Viajante', ML + (meioX - 5 - ML) / 2, y, { align: 'center' });
+  doc.text('Administrativo (aprovação no Intra)', meioX + 5 + (MR - meioX - 5) / 2, y, { align: 'center' });
+  doc.setFont(undefined, 'normal'); doc.setFontSize(7);
+  y += 5;
+  if (resumo.assinatura) {
+    doc.text(`Assinado digitalmente por ${resumo.assinatura.nome} (${resumo.assinatura.identificador})`, ML + (meioX - 5 - ML) / 2, y, { align: 'center' });
+    doc.text(`em ${new Date(resumo.assinatura.dataHora).toLocaleString('pt-BR')}`, ML + (meioX - 5 - ML) / 2, y + 4, { align: 'center' });
+    doc.text(`Código de verificação: ${resumo.assinatura.hash.slice(0, 16)}`, ML + (meioX - 5 - ML) / 2, y + 8, { align: 'center' });
+  } else {
+    doc.text('Pendente de assinatura digital no aplicativo', ML + (meioX - 5 - ML) / 2, y, { align: 'center' });
+  }
+  doc.text('Análise e aprovação registradas no Intra', meioX + 5 + (MR - meioX - 5) / 2, y, { align: 'center' });
+
+  // Rodapé
+  doc.setFontSize(7);
+  doc.text('AGROQUIMA PRODUTOS AGROPECUÁRIOS LTDA — Adiantamento Para Despesas de Viagem', ML, 290);
+  doc.text('Página 1 de 1', MR, 290, { align: 'right' });
+
   return doc;
 }
 
@@ -1556,9 +1674,8 @@ function renderizarDespesas() {
 
   // Atualizar saldos
   const consumido = DESPESAS.reduce((s, d) => s + (d.valor || 0), 0);
-  const total = 1000;
   document.getElementById('advCons').textContent = 'R$ ' + consumido.toFixed(2).replace('.',',');
-  document.getElementById('advDisp').textContent = 'R$ ' + (total - consumido).toFixed(2).replace('.',',');
+  document.getElementById('advDisp').textContent = 'R$ ' + (ADV_VALOR_ADIANTAMENTO - consumido).toFixed(2).replace('.',',');
 }
 
 function temDivergenciaDespesa(d) {
