@@ -18,22 +18,51 @@
 //
 // ─── CONTRATO DE INTEGRAÇÃO COM O INTRA (rascunho — só documentação, nada aqui muda
 // o comportamento atual) ───
-// Levantado a partir de um HAR real do Intra (sistema em JSF/PrimeFaces, sem API
-// REST/JSON hoje — tudo é postback de tela). Quando o TI expuser a API real, é isto
-// que cada endpoint precisa receber/enviar:
+// Levantado a partir de HARs reais do Intra (sistema em JSF/PrimeFaces, sem API
+// REST/JSON hoje — tudo é postback de tela: advApp.jsf para abrir/fechar ADV e
+// analiseGerenteComercialApp.jsf para a aprovação do gerente). Quando o TI expuser a
+// API real, é isto que cada endpoint precisa receber/enviar:
 //
 // dadosUsuario / buscarDadosUsuario — hoje é stub e só serve para restaurar backup.
 // É também o ponto natural para o Intra empurrar pro app os dados do ADV: a ABERTURA
 // do ADV é sempre feita no Intra (nunca pelo app), que então envia pro app:
-//   numeroADV     <- "Numero ADV" do Intra (ex: 635282) — não existe ainda no app
-//   filial        <- código real da filial, formato "NN-SIGLA" (ex: "21-MOZ"; ver FILIAIS
-//                    em dados-brasil.js, já alinhado com as 30 filiais reais da base de regionais)
-//   parceiro      <- "Parceiro" do Intra (ex: "37675 - THIAGO PEREIRA VAZ")
-//   valorAbertura <- "Valor" do Intra; substitui o mock ADV_VALOR_ADIANTAMENTO (index.html)
-//   statusIntra   <- vocabulário próprio do Intra ("Aberto/Enviado", "Pen. Aprovação
-//                    Despesa", "Pen. Ordem Fechamento", "Nenhuma Pendência", "Cancelado")
-//                    — hoje o app usa um vocabulário próprio (ADV_STATUS); alinhar os
-//                    dois é uma decisão maior, ainda não feita.
+//   numeroADV     <- "Numero ADV" do Intra (ex: 635569) — não existe ainda no app
+//   filial        <- código real da filial; no Intra aparece como "SIGLA - NN" (ex:
+//                    "BAR - 17"), no app guardamos "NN-SIGLA" (ex: "17-BAR"; ver
+//                    FILIAIS em dados-brasil.js, já alinhado com as 30 filiais reais
+//                    da base de regionais)
+//   parceiro      <- "Parceiro" do Intra, código + nome (ex: "37064 - MALONNE MATEUS
+//                    DE LIMA SILVA BORGES")
+//   valorAbertura <- "Valor Adiantamento" do Intra; substitui o mock
+//                    ADV_VALOR_ADIANTAMENTO (index.html)
+//   valorPendente / valorRepassado <- o Intra já separa isso no fechamento do ADV
+//                    anterior (pendente = ainda não comprovado, repassado = já
+//                    gasto; valorAbertura = valorPendente + valorRepassado). O app
+//                    hoje não distingue esses dois valores.
+//   kmInicial     <- o "Km Final" informado pelo financeiro ao fechar o ADV anterior
+//                    (tela "Acertar Fechamento") volta como "Km Inicial" do próximo
+//                    ADV do mesmo parceiro/veículo — confirmado nos HARs (Km Final
+//                    48156 do ADV 635461 == Km Inicial do ADV 635569 aberto na
+//                    sequência).
+//   statusIntra   <- o Intra tem DUAS situações independentes, não uma só:
+//                    (1) "Situação" do ADV (tela de consulta por filial,
+//                    CmbSituacao): AB Aberto, ED Editado, IM Impresso, FE Fechado,
+//                    CA Cancelado, RE Reaberto, DA/DF Desfazer Exportação de
+//                    Abertura/Fechamento, EA Exportado Caixa Abertura, EF Exportado
+//                    Caixa Fechamento.
+//                    (2) "Status Lançamento" — aprovação do gerente comercial
+//                    (analiseGerenteComercialApp.jsf; vale pra Adv-Abertura e outros
+//                    tipos de lançamento: CTe, Requisição Pagamento, Alteração de
+//                    Comissão, Nota Crédito/Débito): ABT Aberto/Pendente, REJ
+//                    Rejeitado, PAR Aprovado Parcial, APR Aprovado Total. Confirmado
+//                    no HAR: um ADV recém-aberto entra como ABT e só fica realmente
+//                    disponível pro representante depois que o gerente aprova (vira
+//                    APR via botão "Validar").
+//                    O app hoje usa um vocabulário próprio (ADV_STATUS: aberto /
+//                    aguardando_aprovacao / concluido / assinado), mais parecido com
+//                    (2) do que com (1) — aguardando_aprovacao ~ ABT, concluido ~
+//                    APR; "assinado" não tem equivalente no Intra, é só do app.
+//                    Alinhar os dois de fato é decisão maior, ainda não feita.
 //
 // sincronizarDespesas — cada despesa enviada deve mapear para as colunas reais da
 // tabela de despesas do Intra:
@@ -49,9 +78,13 @@
 // Intra e não precisam ser enviados. "Conta Contábil"/"Historico Contábil" também não:
 // são preenchidos pelo financeiro DEPOIS da aprovação, dentro do próprio Intra.
 //
-// autorizarFechamento / confirmarFechamentoADV — consentimentos que o app já registra
-// hoje; ainda não têm campo correspondente confirmado do lado do Intra para bloquear
-// o fechamento sem essa autorização (depende do TI implementar).
+// autorizarFechamento / confirmarFechamentoADV — no Intra, o fechamento de um ADV é
+// feito pelo financeiro na tela "Acertar Fechamento": informa Km Final, o motivo do
+// fechamento (texto livre) e marca um campo cujo nome sugere "diferença utilizada no
+// próximo ADV" (não confirmamos o texto exato do rótulo, só o id do campo) — é
+// provavelmente o que explica o carry-over de Km citado acima. O app já registra
+// consentimentos equivalentes hoje; ainda não há campo confirmado do lado do Intra
+// para bloquear o fechamento sem essa autorização (depende do TI implementar).
 //
 // Pendência observada: nas despesas reais já existentes no Intra, "Justificativa"
 // aparece como null mesmo o app já coletando esse campo — confirmar com a TI se o
