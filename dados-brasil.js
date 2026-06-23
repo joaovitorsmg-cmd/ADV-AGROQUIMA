@@ -79,6 +79,11 @@ const MUNICIPIOS = {
 // Lista oficial de filiais da Agroquima, extraída da base de regionais (código + sigla +
 // cidade + UF) enviada pela empresa. Não é sequencial — os códigos pulados (2, 6-9, 15, 18,
 // 20, 26, 33, 39, 42 etc.) não correspondem a filiais comerciais nesta base.
+// Quatro códigos não são filiais comerciais "padrão" (loja em cidade) e tiveram o nome
+// detalhado a partir de esclarecimento da empresa, já que a LOJA da planilha sozinha não
+// deixava isso claro: 13-FAG é a Unidade de Beneficiamento de Sementes (Goiânia/GO),
+// 24-FAP e 25-FCB são fábricas (Aparecida de Goiânia/GO e Cuiabá/MT) e 36-GRA é a oficina
+// de Goianira/GO.
 const FILIAIS = [
   {id:'1-MTZ',nome:'Matriz - GO (1-MTZ)'},
   {id:'3-ARG',nome:'Araguaína - TO (3-ARG)'},
@@ -87,7 +92,7 @@ const FILIAIS = [
   {id:'10-MAR',nome:'Marabá - PA (10-MAR)'},
   {id:'11-JAT',nome:'Jataí - GO (11-JAT)'},
   {id:'12-CRI',nome:'Cristalina - GO (12-CRI)'},
-  {id:'13-FAG',nome:'UBS - GO (13-FAG)'},
+  {id:'13-FAG',nome:'Unidade de Beneficiamento de Sementes - Goiânia/GO (13-FAG)'},
   {id:'14-RED',nome:'Redenção - PA (14-RED)'},
   {id:'16-IMP',nome:'Imperatriz - MA (16-IMP)'},
   {id:'17-BAR',nome:'Barra do Garças - MT (17-BAR)'},
@@ -95,8 +100,8 @@ const FILIAIS = [
   {id:'21-MOZ',nome:'Mozarlândia - GO (21-MOZ)'},
   {id:'22-PGM',nome:'Paragominas - PA (22-PGM)'},
   {id:'23-SFX',nome:'São Félix do Xingu - PA (23-SFX)'},
-  {id:'24-FAP',nome:'Fábrica Aparecida - GO (24-FAP)'},
-  {id:'25-FCB',nome:'Cuiabá - MT (25-FCB)'},
+  {id:'24-FAP',nome:'Fábrica de Aparecida de Goiânia - GO (24-FAP)'},
+  {id:'25-FCB',nome:'Fábrica de Cuiabá - MT (25-FCB)'},
   {id:'27-URU',nome:'Uruaçu - GO (27-URU)'},
   {id:'28-MOR',nome:'Morrinhos - GO (28-MOR)'},
   {id:'29-CON',nome:'Confresa - MT (29-CON)'},
@@ -105,7 +110,7 @@ const FILIAIS = [
   {id:'32-XRA',nome:'Xinguara - PA (32-XRA)'},
   {id:'34-POR',nome:'Porangatu - GO (34-POR)'},
   {id:'35-PLA',nome:'Pontes e Lacerda - MT (35-PLA)'},
-  {id:'36-GRA',nome:'Goianira - GO (36-GRA)'},
+  {id:'36-GRA',nome:'Oficina Goianira - GO (36-GRA)'},
   {id:'37-CAN',nome:'Canarana - MT (37-CAN)'},
   {id:'38-GUR',nome:'Gurupi - TO (38-GUR)'},
   {id:'40-RIA',nome:'Rialma - GO (40-RIA)'},
