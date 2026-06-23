@@ -608,12 +608,12 @@ body {
         </div>
         <div class="form-group">
           <label class="form-label">Valor *</label>
-          <input class="form-input" id="dValor" type="tel" placeholder="Ex: 250,00" oninput="mascaraValor(this)" onblur="finalizarMascaraValor(this)">
+          <input class="form-input" id="dValor" type="tel" placeholder="Ex: 250,00" oninput="mascaraValor(this); reavaliarOCR()" onblur="finalizarMascaraValor(this); reavaliarOCR()">
         </div>
         <div class="form-group">
           <label class="form-label">Data *</label>
           <div style="position:relative">
-            <input class="form-input" id="dData" type="tel" placeholder="Ex: 22062026" oninput="mascaraData(this); sincronizarDataNativa()" maxlength="10" style="padding-right:42px">
+            <input class="form-input" id="dData" type="tel" placeholder="Ex: 22062026" oninput="mascaraData(this); sincronizarDataNativa(); reavaliarOCR()" maxlength="10" style="padding-right:42px">
             <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:17px;pointer-events:none">📅</span>
             <input type="date" id="dDataNativo" onchange="dataNativaAlterada(this)" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);width:30px;height:30px;opacity:0;border:none;cursor:pointer">
           </div>
@@ -639,7 +639,7 @@ body {
       <div id="stepBody2" style="display:none">
         <div class="form-group">
           <label class="form-label">Número da nota fiscal *</label>
-          <input class="form-input" id="dNF" type="tel" placeholder="Ex: 170">
+          <input class="form-input" id="dNF" type="tel" placeholder="Ex: 170" oninput="reavaliarOCR()">
         </div>
         <div class="form-group">
           <label class="form-label">Anexe a nota fiscal</label>
@@ -652,7 +652,7 @@ body {
           <div id="ocrStatus"></div>
         </div>
         <div class="checkbox-row mt16">
-          <input type="checkbox" id="dNFMao">
+          <input type="checkbox" id="dNFMao" onchange="renderizarStatusOCR(OCR_RESULTADO_ATUAL)">
           <label for="dNFMao">Confirmo que esta é uma nota fiscal escrita à mão e estou ciente de que ela será avaliada para aprovação.</label>
         </div>
       </div>
@@ -960,6 +960,8 @@ let CAL_ANO = new Date().getFullYear();
 let DIA_SELECIONADO = new Date();
 let OCR_ARQUIVO_ATUAL = null;
 let OCR_RESULTADO_ATUAL = null;
+let OCR_EM_ANDAMENTO = false;
+let ANEXO_EXISTENTE = false;
 let PA_TIPO = 'representante';
 let PA_IDENTIFICADOR_VERIFICADO = null;
 let DESPESA_EDITANDO_ID = null;
@@ -1397,6 +1399,14 @@ function gerarResumoADV() {
     porTipo[t].qtd += 1;
   });
 
+  // Data de abertura do ADV: não há um registro explícito de "abertura" no app hoje —
+  // a data da despesa mais antiga do fechamento é a melhor aproximação disponível.
+  const datasDespesas = despesas
+    .map(d => d.data)
+    .filter(Boolean)
+    .sort((a, b) => a.split('/').reverse().join('') - b.split('/').reverse().join(''));
+  const dataAbertura = datasDespesas[0] || null;
+
   return {
     adv: (document.getElementById('advNum')?.textContent || '').replace('#', ''),
     identificador: USUARIO?.identificador || '',
@@ -1406,6 +1416,7 @@ function gerarResumoADV() {
     valorAdiantamento: ADV_VALOR_ADIANTAMENTO,
     valorConsumido: consumidoTotal,
     valorDisponivel: ADV_VALOR_ADIANTAMENTO - consumidoTotal,
+    dataAbertura,
     geradoEm: new Date().toISOString(),
     despesas: despesas.map((d, i) => ({
       seq: i + 1, id: d.id, nf: d.nf, tipo: d.tipo, data: d.data, municipio: d.municipio, uf: d.uf,
@@ -1444,133 +1455,310 @@ function abrirFinalizacaoADV() {
 // tabela de despesas e linhas de assinatura, com os dados disponíveis no app. Campos que hoje só
 // existem no Intra (km, veículo, lançamentos contábeis em partida dobrada) não são inventados aqui;
 // ficam para quando a integração real estiver disponível.
-function pdfMoeda(v) { return 'R$ ' + (v || 0).toFixed(2).replace('.', ','); }
+function pdfMoeda(v) { return (v || 0).toFixed(2).replace('.', ','); }
 
+// ─── NÚMERO POR EXTENSO (pt-BR, moeda) ───
+// O "Relatório de Despesa de Viagem" oficial sempre grava o valor numérico junto
+// com o valor escrito por extenso entre parênteses — reproduzido aqui com a mesma
+// convenção bancária brasileira de grafar "hum" (não "um") quando a unidade abre
+// o número (ex.: "hum mil reais", "hum real").
+const EXTENSO_UNIDADE = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
+const EXTENSO_DEZ_19 = ['dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'];
+const EXTENSO_DEZENA = ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
+const EXTENSO_CENTENA = ['', 'cento', 'duzentos', 'trezentos', 'quatrocentos', 'quinhentos', 'seiscentos', 'setecentos', 'oitocentos', 'novecentos'];
+function extensoGrupo(n) {
+  if (n === 100) return 'cem';
+  const partes = [];
+  const c = Math.floor(n / 100), r = n % 100;
+  if (c) partes.push(EXTENSO_CENTENA[c]);
+  if (r >= 10 && r < 20) partes.push(EXTENSO_DEZ_19[r - 10]);
+  else {
+    const d = Math.floor(r / 10), u = r % 10;
+    if (d) partes.push(EXTENSO_DEZENA[d]);
+    if (u) partes.push(EXTENSO_UNIDADE[u]);
+  }
+  return partes.join(' e ');
+}
+function numeroPorExtenso(n) {
+  n = Math.floor(n);
+  if (n === 0) return 'zero';
+  if (n === 1) return 'hum';
+  const milhoes = Math.floor(n / 1000000), milhares = Math.floor((n % 1000000) / 1000), centenas = n % 1000;
+  const partes = [];
+  if (milhoes) partes.push((milhoes === 1 ? 'hum' : extensoGrupo(milhoes)) + (milhoes === 1 ? ' milhão' : ' milhões'));
+  if (milhares) partes.push(milhares === 1 ? 'hum mil' : extensoGrupo(milhares) + ' mil');
+  if (centenas) partes.push(extensoGrupo(centenas));
+  return partes.join(' e ');
+}
+function valorPorExtenso(valor) {
+  valor = Math.round((valor || 0) * 100) / 100;
+  const inteiro = Math.floor(Math.abs(valor)), centavos = Math.round((Math.abs(valor) - inteiro) * 100);
+  const partes = [];
+  if (inteiro > 0 || centavos === 0) partes.push(`${numeroPorExtenso(inteiro)} ${inteiro === 1 ? 'real' : 'reais'}`);
+  if (centavos > 0) partes.push(`${numeroPorExtenso(centavos)} ${centavos === 1 ? 'centavo' : 'centavos'}`);
+  return (valor < 0 ? '- ' : '') + partes.join(' e ');
+}
+
+// Letras espaçadas — usado nos títulos de seção do modelo oficial (ex.: "R E S U M O ...").
+function espacado(titulo) { return titulo.split(' ').map(p => p.split('').join(' ')).join('   '); }
+
+async function carregarImagemDataURL(src) {
+  const resp = await fetch(src);
+  const blob = await resp.blob();
+  return new Promise((resolve, reject) => {
+    const leitor = new FileReader();
+    leitor.onload = () => resolve(leitor.result);
+    leitor.onerror = () => reject(leitor.error);
+    leitor.readAsDataURL(blob);
+  });
+}
+
+// Monta o PDF do fechamento reproduzindo fielmente o layout do "Relatório de Despesa de
+// Viagem" oficial da Agroquima (gerado hoje pelo Intra) — mesmas caixas, rótulos, ordem dos
+// campos, tabela de despesas, RESUMO DOS GASTOS e RESUMO CONTÁBIL, e a logo real da empresa.
+// Campos que hoje só existem no Intra (km, veículo, lançamentos contábeis em partida dobrada,
+// origem do pagamento) aparecem como "—": não são inventados aqui, pois o app não tem esses
+// dados — só ficam disponíveis de fato quando a integração com o Intra existir.
 async function montarPdfADV(resumo) {
   if (!window.jspdf) await carregarScript('https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js');
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   const ML = 10, MR = 200, LARGURA = MR - ML;
-  let y = 14;
+  const ND = '—'; // valor não disponível no app (depende do Intra)
 
-  // Cabeçalho
-  doc.setFont(undefined, 'bold'); doc.setFontSize(16);
-  doc.text('AGROQUIMA', ML, y);
-  doc.setFontSize(13);
-  doc.text('Relatório de Despesa de Viagem', MR, y, { align: 'right' });
-  y += 3;
-  doc.setLineWidth(0.4); doc.line(ML, y, MR, y);
-  y += 7;
-
-  // Caixa de identificação (Número / Viajante / Cargo-Função / Filial)
-  const caixaTopo = y;
-  doc.setFont(undefined, 'normal'); doc.setFontSize(8);
-  const campo = (label, valor, x, yy) => {
-    doc.setFont(undefined, 'bold'); doc.text(label, x, yy);
-    doc.setFont(undefined, 'normal'); doc.text(String(valor || '—'), x, yy + 4);
+  const campo = (label, valor, x, yy, fonteValor, largura) => {
+    doc.setFont(undefined, 'bold'); doc.setFontSize(6.5); doc.text(label, x, yy);
+    doc.setFont(undefined, 'normal'); doc.setFontSize(fonteValor || 8);
+    const texto = String(valor ?? ND);
+    if (largura) doc.text(doc.splitTextToSize(texto, largura), x, yy + 3.6);
+    else doc.text(texto, x, yy + 3.6);
   };
-  campo('Número:', resumo.adv, ML + 2, y + 5);
-  campo('Viajante:', `${resumo.nome} (${resumo.identificador})`, ML + 40, y + 5);
-  campo('Cargo / Função:', resumo.cargo, ML + 130, y + 5);
-  campo('Filial:', resumo.filial, ML + 2, y + 16);
-  campo('Valor do Adiantamento:', pdfMoeda(resumo.valorAdiantamento), ML + 40, y + 16);
-  campo('Gerado em:', new Date(resumo.geradoEm).toLocaleString('pt-BR'), ML + 130, y + 16);
-  y += 24;
-  doc.rect(ML, caixaTopo, LARGURA, y - caixaTopo);
-  doc.line(ML + 38, caixaTopo, ML + 38, y);
-  doc.line(ML + 128, caixaTopo, ML + 128, y);
-  doc.line(ML, caixaTopo + 11, MR, caixaTopo + 11);
-  y += 6;
+  const campoExtenso = (label, valor, x, yy, largura) => {
+    doc.setFont(undefined, 'bold'); doc.setFontSize(6.5); doc.text(label, x, yy);
+    doc.setFont(undefined, 'normal'); doc.setFontSize(8);
+    const texto = valor == null ? ND : `${pdfMoeda(valor)} ( ${valorPorExtenso(valor)} )`;
+    doc.text(doc.splitTextToSize(texto, largura), x, yy + 4);
+  };
 
-  // Tabela de despesas
-  const colX = [ML, ML + 12, ML + 34, ML + 64, ML + 84, ML + 124, ML + 154];
-  const linhaHeader = y;
-  doc.setFillColor(230, 230, 230);
-  doc.rect(ML, linhaHeader, LARGURA, 7, 'F');
-  doc.setFont(undefined, 'bold'); doc.setFontSize(8);
-  ['Seq', 'Data', 'Cidade/UF', 'Documento', 'Tipo de Gasto', 'Valor', 'Status'].forEach((titulo, i) => {
-    doc.text(titulo, colX[i] + 1, linhaHeader + 5);
-  });
-  y += 7;
-  doc.setFont(undefined, 'normal');
+  let logoDataUrl = null;
+  try { logoDataUrl = await carregarImagemDataURL('assets/logo-agroquima-transparente.png'); } catch (e) { /* segue sem logo se não carregar */ }
+
+  let y = 10;
+
+  // Cabeçalho: logo real + título
+  if (logoDataUrl) doc.addImage(logoDataUrl, 'PNG', ML, y, 30, 30 * (143 / 352));
+  doc.setFont(undefined, 'bold'); doc.setFontSize(13);
+  doc.text('Relatório de Despesa de Viagem', MR, y + 6, { align: 'right' });
+  y += 16;
+
+  // ── Caixa principal: identificação + abertura/fechamento + valores ──
+  const caixaTopo = y;
+  const colsRow1 = [ML, ML + 30, ML + 105]; // Numero | Viajante | Cargo-Função
+  const xBoxDir = ML + 150, larguraBoxDir = MR - xBoxDir; // Informações da Abertura/Fechamento
+  campo('Numero:', resumo.adv, colsRow1[0] + 2, caixaTopo + 5);
+  campo('Viajante (Funcionário / Motorista / Parceiro):', `${resumo.identificador} - ${resumo.nome}`.toUpperCase(), colsRow1[1] + 2, caixaTopo + 5, 7.5, 73);
+  campo('Cargo / Função:', (resumo.cargo || '').toUpperCase(), colsRow1[2] + 2, caixaTopo + 5, 7.5, 43);
+
+  // Filial e Data ficam lado a lado (não empilhadas) dentro da caixa estreita de
+  // 40mm — empilhar as duas linhas de valor nesse espaço comprimia os textos a
+  // ponto de a linha "Data:" colidir visualmente com o valor da Filial acima.
+  const xDataAbertFech = xBoxDir + 22;
+  doc.setFont(undefined, 'bold'); doc.setFontSize(6.5);
+  doc.text('Informações da Abertura:', xBoxDir + 2, caixaTopo + 3.5);
+  campo('Filial:', resumo.filial, xBoxDir + 2, caixaTopo + 7.5, 6.5, 19);
+  campo('Data:', resumo.dataAbertura || ND, xDataAbertFech, caixaTopo + 7.5, 6.5, 16);
+
+  const row2Y = caixaTopo + 16;
+  const colsRow2 = [ML, ML + 28, ML + 50, ML + 74, ML + 96, ML + 114, ML + 132]; // até ML+150
+  campo('Meio de Transporte:', ND, colsRow2[0] + 2, row2Y + 5);
+  campo('Data da Partida:', resumo.dataAbertura || ND, colsRow2[1] + 2, row2Y + 5);
+  campo('Regresso Previsto:', ND, colsRow2[2] + 2, row2Y + 5);
+  campo('Veiculo:', ND, colsRow2[3] + 2, row2Y + 5);
+  campo('Km Inicial:', ND, colsRow2[4] + 2, row2Y + 5);
+  campo('Km Final:', ND, colsRow2[5] + 2, row2Y + 5);
+  campo('Km Rodados:', ND, colsRow2[6] + 2, row2Y + 5);
+
+  doc.setFont(undefined, 'bold'); doc.setFontSize(6.5);
+  doc.text('Informações do Fechamento:', xBoxDir + 2, row2Y + 3.5);
+  campo('Filial:', resumo.filial, xBoxDir + 2, row2Y + 7.5, 6.5, 19);
+  campo('Data:', new Date(resumo.geradoEm).toLocaleDateString('pt-BR'), xDataAbertFech, row2Y + 7.5, 6.5, 16);
+
+  const row3Y = caixaTopo + 32;
+  campoExtenso('Valor Pendente do Acerto Anterior:', null, ML + 2, row3Y + 5, LARGURA - 4);
+  const row4Y = row3Y + 9;
+  campoExtenso('Valor do Adiantamento:', resumo.valorAdiantamento, ML + 2, row4Y + 5, LARGURA - 4);
+  const row5Y = row4Y + 9;
+  campoExtenso('Valor a ser repassado ao Viajante:', resumo.valorDisponivel, ML + 2, row5Y + 5, LARGURA - 4);
+  y = row5Y + 9;
+
+  doc.setLineWidth(0.3);
+  doc.rect(ML, caixaTopo, LARGURA, y - caixaTopo);
+  doc.line(ML, row2Y, xBoxDir, row2Y);
+  doc.line(ML, row3Y, MR, row3Y);
+  doc.line(ML, row4Y, MR, row4Y);
+  doc.line(ML, row5Y, MR, row5Y);
+  colsRow1.slice(1).forEach(x => doc.line(x, caixaTopo, x, row2Y));
+  colsRow2.slice(1).forEach(x => doc.line(x, row2Y, x, row3Y));
+  doc.line(xBoxDir, caixaTopo, xBoxDir, row3Y);
+  doc.line(xBoxDir, row2Y, MR, row2Y);
+  y += 4;
+
+  // ── Itinerário / Motivo ──
+  const itTopo = y, itAltura = 14, itMeio = ML + LARGURA * 0.55;
+  const cidadesVisitadas = [...new Set(resumo.despesas.map(d => `${d.municipio || '—'}-${d.uf || ''}`))].join(' > ');
+  doc.setFont(undefined, 'bold'); doc.setFontSize(6.5);
+  doc.text('Itinerário:', ML + 2, itTopo + 3.5);
+  doc.text('Motivo:', itMeio + 2, itTopo + 3.5);
+  doc.setFont(undefined, 'normal'); doc.setFontSize(7.5);
+  doc.text(doc.splitTextToSize(cidadesVisitadas || ND, itMeio - ML - 4), ML + 2, itTopo + 8);
+  doc.text(ND, itMeio + 2, itTopo + 8);
+  doc.rect(ML, itTopo, LARGURA, itAltura);
+  doc.line(itMeio, itTopo, itMeio, itTopo + itAltura);
+  y = itTopo + itAltura + 4;
+
+  // ── Tabela de despesas ──
+  const colW = [14, 22, 24, 26, 10, 18, 22, 20];
+  const colX = []; colW.reduce((acc, w) => { colX.push(acc); return acc + w; }, ML);
+  const tituloCols = ['Sequencia', 'Data da Despesa', 'Filial Despesa', 'Cidade', 'UF', 'Valor', 'Documento', 'Tipo Gasto', 'Resumo Contabil'];
+  const colXTotal = [...colX, MR - 34]; // última coluna (Resumo Contabil) até a margem direita
+  const colWTotal = [...colW, 34];
+
+  // Trunca com "…" o texto que não couber na largura da coluna — nomes de filial,
+  // cidade ou tipo de despesa têm tamanho variável e não podem invadir a coluna vizinha.
+  const caber = (texto, largura) => {
+    texto = String(texto ?? '—');
+    if (doc.getTextWidth(texto) <= largura) return texto;
+    let cortado = texto;
+    while (cortado.length > 1 && doc.getTextWidth(cortado + '…') > largura) cortado = cortado.slice(0, -1);
+    return cortado + '…';
+  };
+
+  const desenharHeaderTabela = (yy) => {
+    doc.setFillColor(230, 230, 230);
+    doc.rect(ML, yy, LARGURA, 7, 'F');
+    doc.setDrawColor(0); doc.rect(ML, yy, LARGURA, 7);
+    colXTotal.slice(1).forEach(x => doc.line(x, yy, x, yy + 7));
+    doc.setFont(undefined, 'bold'); doc.setFontSize(6.5);
+    tituloCols.forEach((titulo, i) => doc.text(titulo, colXTotal[i] + 1, yy + 4.5));
+    return yy + 7;
+  };
+  y = desenharHeaderTabela(y);
+  doc.setFont(undefined, 'normal'); doc.setFontSize(7);
 
   if (resumo.despesas.length === 0) {
-    doc.rect(ML, y, LARGURA, 8);
-    doc.text('Nenhuma despesa neste fechamento.', ML + 2, y + 5.5);
-    y += 8;
+    doc.rect(ML, y, LARGURA, 7);
+    doc.text('Nenhuma despesa neste fechamento.', ML + 2, y + 4.7);
+    y += 7;
   } else {
     resumo.despesas.forEach(d => {
-      if (y > 265) { doc.addPage(); y = 16; }
-      const alturaLinha = d.status === 'reprovada' ? 11 : 7;
+      const alturaLinha = d.status === 'reprovada' ? 10 : 6.5;
+      if (y + alturaLinha > 278) { doc.addPage(); y = 16; y = desenharHeaderTabela(y); doc.setFont(undefined, 'normal'); doc.setFontSize(7); }
+      doc.setTextColor(d.status === 'reprovada' ? 180 : 0, d.status === 'reprovada' ? 40 : 0, d.status === 'reprovada' ? 40 : 0);
       doc.rect(ML, y, LARGURA, alturaLinha);
-      doc.text(String(d.seq), colX[0] + 1, y + 5);
-      doc.text(d.data || '—', colX[1] + 1, y + 5);
-      doc.text(`${d.municipio || '—'}-${d.uf || ''}`, colX[2] + 1, y + 5);
-      doc.text(`NF ${d.nf || '—'}`, colX[3] + 1, y + 5);
-      doc.text(d.tipo || '—', colX[4] + 1, y + 5);
-      doc.text(pdfMoeda(d.valor), colX[5] + 1, y + 5);
-      if (d.status === 'reprovada') doc.setTextColor(180, 40, 40); else doc.setTextColor(20, 130, 60);
-      doc.text(d.status === 'reprovada' ? 'Recusada' : 'Aprovada', colX[6] + 1, y + 5);
-      doc.setTextColor(0, 0, 0);
+      colXTotal.slice(1).forEach(x => doc.line(x, y, x, y + alturaLinha));
+      doc.text(caber(d.seq, colWTotal[0] - 2), colXTotal[0] + 1, y + 4.5);
+      doc.text(caber(d.data, colWTotal[1] - 2), colXTotal[1] + 1, y + 4.5);
+      doc.text(caber(resumo.filial, colWTotal[2] - 2), colXTotal[2] + 1, y + 4.5);
+      doc.text(caber(d.municipio, colWTotal[3] - 2), colXTotal[3] + 1, y + 4.5);
+      doc.text(caber(d.uf, colWTotal[4] - 2), colXTotal[4] + 1, y + 4.5);
+      doc.text(caber(pdfMoeda(d.valor), colWTotal[5] - 2), colXTotal[5] + 1, y + 4.5);
+      doc.text(caber(d.nf, colWTotal[6] - 2), colXTotal[6] + 1, y + 4.5);
+      doc.text(caber(d.tipo, colWTotal[7] - 2), colXTotal[7] + 1, y + 4.5);
+      doc.text(ND, colXTotal[8] + 1, y + 4.5);
       if (d.status === 'reprovada') {
+        doc.setFontSize(6);
+        doc.text(`Recusada — Motivo: ${d.motivoReprovacao || 'não informado'}`, colXTotal[1] + 1, y + 8.5);
         doc.setFontSize(7);
-        doc.text(`Motivo: ${d.motivoReprovacao || 'não informado'}`, colX[2] + 1, y + 9);
-        doc.setFontSize(8);
       }
+      doc.setTextColor(0, 0, 0);
       y += alturaLinha;
     });
   }
+  y += 6;
+
+  // ── RESUMO DOS GASTOS ──
+  if (y > 250) { doc.addPage(); y = 16; }
+  doc.setFont(undefined, 'bolditalic'); doc.setFontSize(8);
+  doc.text(espacado('RESUMO DOS GASTOS'), ML + LARGURA / 2, y, { align: 'center' });
+  y += 3;
+  const rgTopo = y;
+  const refeicoes = resumo.porTipo['Refeição'] || { valor: 0, qtd: 0 };
+  const hoteis = resumo.porTipo['Hotel'] || { valor: 0, qtd: 0 };
+  const totalOutros = Math.max(resumo.totalAprovado - refeicoes.valor - hoteis.valor, 0);
+  const totalDiferenca = resumo.valorAdiantamento - resumo.totalAprovado;
+  const rgColX = [ML, ML + LARGURA / 3, ML + LARGURA * 2 / 3];
+  doc.setFont(undefined, 'italic'); doc.setFontSize(7);
+  const linhaRG = (linha, yy) => linha.forEach((c, i) => {
+    doc.setFont(undefined, 'bolditalic'); doc.text(c.label, rgColX[i] + 2, yy);
+    doc.setFont(undefined, 'italic'); doc.text(String(c.valor), rgColX[i] + 2 + doc.getTextWidth(c.label) + 1.5, yy);
+  });
+  linhaRG([
+    { label: 'Total Despesas R$:', valor: pdfMoeda(resumo.totalAprovado) },
+    { label: 'Total Outros R$:', valor: pdfMoeda(totalOutros) },
+    { label: 'Total Diferença R$:', valor: pdfMoeda(totalDiferenca) }
+  ], rgTopo + 5);
+  linhaRG([
+    { label: 'Refeições R$:', valor: pdfMoeda(refeicoes.valor) },
+    { label: 'Quantidade (Und):', valor: refeicoes.qtd },
+    { label: 'Média (R$/Qtde):', valor: pdfMoeda(refeicoes.qtd ? refeicoes.valor / refeicoes.qtd : 0) }
+  ], rgTopo + 10);
+  linhaRG([
+    { label: 'Diárias(Hotéis) R$:', valor: pdfMoeda(hoteis.valor) },
+    { label: 'Quantidade (Und):', valor: hoteis.qtd },
+    { label: 'Média (R$/Qtde):', valor: pdfMoeda(hoteis.qtd ? hoteis.valor / hoteis.qtd : 0) }
+  ], rgTopo + 15);
+  y = rgTopo + 19;
+  doc.setFont(undefined, 'normal');
+  y += 6;
+
+  // ── RESUMO CONTÁBIL ──
+  if (y > 255) { doc.addPage(); y = 16; }
+  doc.setFont(undefined, 'bolditalic'); doc.setFontSize(8);
+  doc.text(espacado('RESUMO CONTÁBIL'), ML + LARGURA / 2, y, { align: 'center' });
+  y += 3;
+  const rcColX = [ML, ML + 95, ML + 125, ML + 150];
+  doc.setFontSize(7);
+  ['Conta Contábil', 'Movimento', 'Valor', 'Histórico Contábil'].forEach((t, i) => {
+    doc.setFont(undefined, 'bolditalic'); doc.text(t, rcColX[i] + 1, y + 4);
+  });
+  y += 6;
+  doc.setFont(undefined, 'italic'); doc.setFontSize(7);
+  doc.text('Lançamento contábil em partida dobrada gerado pelo Intra após a aprovação do fechamento.', rcColX[0] + 1, y + 4);
   y += 8;
 
-  // Resumo dos gastos
-  doc.setFont(undefined, 'bold'); doc.setFontSize(9);
-  doc.text('RESUMO DOS GASTOS', ML, y); y += 2;
-  const resumoTopo = y;
+  // ── Data + assinaturas ──
+  if (y > 255) { doc.addPage(); y = 16; }
   doc.setFont(undefined, 'normal'); doc.setFontSize(8);
-  const tipos = Object.entries(resumo.porTipo);
-  tipos.forEach(([tipo, info], i) => {
-    doc.text(`${tipo}:`, ML + 2, y + 5 + i * 5);
-    doc.text(`${pdfMoeda(info.valor)}  (${info.qtd} item${info.qtd > 1 ? 's' : ''})`, ML + 60, y + 5 + i * 5);
-  });
-  const baseY = y + 5 + Math.max(tipos.length, 1) * 5;
-  doc.setFont(undefined, 'bold');
-  doc.text('Total aprovado:', ML + 2, baseY);
-  doc.setTextColor(20, 130, 60); doc.text(pdfMoeda(resumo.totalAprovado), ML + 60, baseY); doc.setTextColor(0, 0, 0);
-  doc.text('Total recusado:', ML + 2, baseY + 5);
-  doc.setTextColor(180, 40, 40); doc.text(pdfMoeda(resumo.totalReprovado), ML + 60, baseY + 5); doc.setTextColor(0, 0, 0);
-  doc.text('Saldo disponível do adiantamento:', ML + 110, baseY);
-  doc.text(pdfMoeda(resumo.valorDisponivel), MR - 2, baseY, { align: 'right' });
-  y = baseY + 9;
-  doc.rect(ML, resumoTopo, LARGURA, y - resumoTopo);
-  y += 10;
-
-  // Assinaturas
-  if (y > 250) { doc.addPage(); y = 16; }
-  doc.setFontSize(8);
   doc.text(new Date(resumo.geradoEm).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }), ML, y);
-  y += 14;
+  y += 16;
   const meioX = ML + LARGURA / 2;
+  if (resumo.assinatura) {
+    doc.setFont(undefined, 'italic'); doc.setFontSize(7);
+    doc.text(`Assinado digitalmente por ${resumo.assinatura.nome}`, ML + (meioX - 5 - ML) / 2, y - 3, { align: 'center' });
+  }
   doc.line(ML, y, meioX - 5, y);
   doc.line(meioX + 5, y, MR, y);
   y += 4;
-  doc.setFont(undefined, 'bold');
+  doc.setFont(undefined, 'bold'); doc.setFontSize(8);
   doc.text('Viajante', ML + (meioX - 5 - ML) / 2, y, { align: 'center' });
-  doc.text('Administrativo (aprovação no Intra)', meioX + 5 + (MR - meioX - 5) / 2, y, { align: 'center' });
-  doc.setFont(undefined, 'normal'); doc.setFontSize(7);
-  y += 5;
+  doc.text('Gerente Responsável', meioX + 5 + (MR - meioX - 5) / 2, y, { align: 'center' });
+  doc.setFont(undefined, 'normal'); doc.setFontSize(6.5);
+  y += 4;
   if (resumo.assinatura) {
-    doc.text(`Assinado digitalmente por ${resumo.assinatura.nome} (${resumo.assinatura.identificador})`, ML + (meioX - 5 - ML) / 2, y, { align: 'center' });
-    doc.text(`em ${new Date(resumo.assinatura.dataHora).toLocaleString('pt-BR')}`, ML + (meioX - 5 - ML) / 2, y + 4, { align: 'center' });
-    doc.text(`Código de verificação: ${resumo.assinatura.hash.slice(0, 16)}`, ML + (meioX - 5 - ML) / 2, y + 8, { align: 'center' });
+    doc.text(`em ${new Date(resumo.assinatura.dataHora).toLocaleString('pt-BR')} · código ${resumo.assinatura.hash.slice(0, 16)}`, ML + (meioX - 5 - ML) / 2, y, { align: 'center' });
   } else {
     doc.text('Pendente de assinatura digital no aplicativo', ML + (meioX - 5 - ML) / 2, y, { align: 'center' });
   }
-  doc.text('Análise e aprovação registradas no Intra', meioX + 5 + (MR - meioX - 5) / 2, y, { align: 'center' });
+  doc.text('Aprovação registrada no Intra', meioX + 5 + (MR - meioX - 5) / 2, y, { align: 'center' });
 
-  // Rodapé
-  doc.setFontSize(7);
-  doc.text('AGROQUIMA PRODUTOS AGROPECUÁRIOS LTDA — Adiantamento Para Despesas de Viagem', ML, 290);
-  doc.text('Página 1 de 1', MR, 290, { align: 'right' });
+  // ── Rodapé (em todas as páginas) ──
+  const totalPaginas = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= totalPaginas; p++) {
+    doc.setPage(p);
+    doc.setFont(undefined, 'normal'); doc.setFontSize(7);
+    doc.text('AGROQUIMA PRODUTOS AGROPECUÁRIOS LTDA - Adiantamento Para Despesas de Viagem', ML, 290);
+    doc.text(`Página ${p} de ${totalPaginas}`, MR, 290, { align: 'right' });
+  }
 
   return doc;
 }
@@ -1822,6 +2010,8 @@ function limparFormDespesa() {
   document.getElementById('uploadArea').innerHTML = `<div class="upload-icon">📄</div><div class="upload-txt"><span class="upload-btn-txt">Carregar foto ou arquivo</span></div><div class="upload-limite">Não exceda 50MB</div>`;
   document.getElementById('ocrStatus').innerHTML = '';
   OCR_ARQUIVO_ATUAL = null;
+  OCR_EM_ANDAMENTO = false;
+  ANEXO_EXISTENTE = false;
   OCR_RESULTADO_ATUAL = null;
   DESPESA_EDITANDO_ID = null;
   document.getElementById('modalDespesaTitulo').textContent = 'Nova despesa';
@@ -1854,6 +2044,7 @@ function sincronizarDataNativa() {
 
 function dataNativaAlterada(el) {
   document.getElementById('dData').value = isoParaData(el.value);
+  reavaliarOCR();
 }
 
 function avancarStep() {
@@ -1866,8 +2057,29 @@ function avancarStep() {
     STEP_ATUAL = 2;
     atualizarStep();
   } else {
+    const bloqueio = validarNotaFiscalParaSalvar();
+    if (bloqueio) { mostrarToast(bloqueio); return; }
     salvarDespesa();
   }
+}
+
+// Só existem 3 tipos de documento fiscal aceitos (NF-e, Cupom Fiscal/NFC-e/SAT e
+// NFS-e) — quando o anexo é um deles, os dados lidos pelo OCR têm que conferir com
+// o que foi digitado. O checkbox "nota escrita à mão" é a única forma de pular essa
+// verificação (recibo manual, sem leitura automática possível, sob responsabilidade
+// do próprio usuário).
+function validarNotaFiscalParaSalvar() {
+  if (document.getElementById('dNFMao').checked) return null;
+  if (OCR_EM_ANDAMENTO) return 'Aguarde a análise da nota fiscal terminar';
+  if (!OCR_ARQUIVO_ATUAL && !ANEXO_EXISTENTE) return 'Anexe a nota fiscal ou marque que se trata de uma nota escrita à mão';
+  const r = OCR_RESULTADO_ATUAL;
+  if (!r) return null;
+  if (r.erro || r.leituraInsuficiente) return 'Não foi possível confirmar os dados da nota anexada. Anexe um arquivo mais legível ou marque que se trata de uma nota escrita à mão';
+  if (r.tipoDocumento === 'desconhecido') return 'O arquivo anexado não foi reconhecido como Nota Fiscal Eletrônica, Cupom Fiscal/NFC-e ou Nota Fiscal de Serviço Eletrônico';
+  if (r.numeroDivergente) return `O número digitado não corresponde ao da nota anexada (nº ${r.numeroDetectado})`;
+  if (r.valorDivergente) return `O valor digitado não corresponde ao da nota anexada (R$ ${r.valorDetectado.toFixed(2).replace('.', ',')})`;
+  if (r.dataDivergente) return `A data digitada não corresponde à data de emissão da nota anexada (${r.dataDetectada})`;
+  return null;
 }
 
 function atualizarStep() {
@@ -1897,17 +2109,29 @@ async function abrirEditarDespesa(id) {
   document.getElementById('dMunicipio').value = d.municipio || '';
   document.getElementById('dNF').value = d.nf || '';
   document.getElementById('dNFMao').checked = !!d.nfMao;
-  OCR_RESULTADO_ATUAL = {
-    chaveAcesso: d.chaveAcessoNF || null,
-    itensDetectados: d.itensProibidosDetectados || [],
-    leituraInsuficiente: !!d.leituraOcrInsuficiente,
-    numeroDivergente: !!d.numeroNfDivergente
-  };
-  renderizarStatusOCR(OCR_RESULTADO_ATUAL);
   const anexo = await buscarAnexo(id).catch(() => null);
+  ANEXO_EXISTENTE = !!anexo;
   if (anexo) {
     document.getElementById('uploadArea').classList.add('com-arquivo');
     document.getElementById('uploadArea').innerHTML = `<div class="upload-icon">✅</div><div class="upload-txt" style="color:var(--verde);font-weight:600">${anexo.nome}</div><div class="upload-limite">Anexo já enviado — selecione outro arquivo para substituir</div>`;
+    // Reanalisa o anexo já salvo contra os valores atuais do formulário — a
+    // varredura precisa valer também ao reabrir/editar uma despesa, não só no
+    // lançamento original.
+    await executarAnaliseOCR(anexo.blob);
+  } else {
+    OCR_RESULTADO_ATUAL = {
+      chaveAcesso: d.chaveAcessoNF || null,
+      numeroDetectado: d.numeroDetectadoNF || null,
+      valorDetectado: d.valorDetectadoNF ?? null,
+      dataDetectada: d.dataDetectadaNF || null,
+      tipoDocumento: d.tipoDocumentoNF || null,
+      itensDetectados: d.itensProibidosDetectados || [],
+      leituraInsuficiente: !!d.leituraOcrInsuficiente,
+      numeroDivergente: !!d.numeroNfDivergente,
+      valorDivergente: !!d.valorNfDivergente,
+      dataDivergente: !!d.dataNfDivergente
+    };
+    renderizarStatusOCR(OCR_RESULTADO_ATUAL);
   }
   atualizarStep();
   document.getElementById('modalDespesa').classList.add('aberto');
@@ -1926,9 +2150,15 @@ async function salvarDespesa() {
     nf: document.getElementById('dNF').value,
     nfMao: document.getElementById('dNFMao').checked,
     chaveAcessoNF: ocr?.chaveAcesso || null,
+    numeroDetectadoNF: ocr?.numeroDetectado || null,
+    valorDetectadoNF: ocr?.valorDetectado ?? null,
+    dataDetectadaNF: ocr?.dataDetectada || null,
+    tipoDocumentoNF: ocr?.tipoDocumento || null,
     itensProibidosDetectados: ocr?.itensDetectados || [],
     leituraOcrInsuficiente: !!ocr?.leituraInsuficiente,
-    numeroNfDivergente: !!ocr?.numeroDivergente
+    numeroNfDivergente: !!ocr?.numeroDivergente,
+    valorNfDivergente: !!ocr?.valorDivergente,
+    dataNfDivergente: !!ocr?.dataDivergente
   };
 
   if (DESPESA_EDITANDO_ID) {
@@ -2236,28 +2466,54 @@ function arquivoSelecionado(input) {
   }
 }
 
+function entradaFormularioAtual() {
+  return {
+    numero: document.getElementById('dNF').value,
+    valor: parseFloat((document.getElementById('dValor').value || '0').replace(',', '.')),
+    data: document.getElementById('dData').value
+  };
+}
+
 async function analisarNotaAnexada(file) {
   OCR_ARQUIVO_ATUAL = file;
+  await executarAnaliseOCR(file);
+}
+
+async function executarAnaliseOCR(file) {
   OCR_RESULTADO_ATUAL = null;
+  OCR_EM_ANDAMENTO = true;
   const status = document.getElementById('ocrStatus');
   status.innerHTML = `<div style="font-size:12px;color:var(--cinza);display:flex;align-items:center;gap:6px;margin-top:8px"><span class="spin">⟳</span> Analisando nota fiscal...</div>`;
-  const numeroNF = document.getElementById('dNF').value;
-  const resultado = await analisarNotaFiscal(file, numeroNF);
+  const resultado = await analisarNotaFiscal(file, entradaFormularioAtual());
   OCR_RESULTADO_ATUAL = resultado;
+  OCR_EM_ANDAMENTO = false;
   renderizarStatusOCR(resultado);
+}
+
+// Recompara os dados já extraídos (sem repetir o OCR, que é caro) contra os campos
+// atuais do formulário — chamado quando o usuário corrige o número da nota depois
+// que o anexo já foi lido.
+function reavaliarOCR() {
+  if (!OCR_RESULTADO_ATUAL || OCR_RESULTADO_ATUAL.erro || OCR_EM_ANDAMENTO) return;
+  OCR_RESULTADO_ATUAL = compararNotaComFormulario(OCR_RESULTADO_ATUAL, entradaFormularioAtual());
+  renderizarStatusOCR(OCR_RESULTADO_ATUAL);
 }
 
 function renderizarStatusOCR(r) {
   const status = document.getElementById('ocrStatus');
   if (!r) { status.innerHTML = ''; return; }
+  const notaManual = document.getElementById('dNFMao').checked;
   const alertas = [];
   if (r.erro) {
-    alertas.push({ msg: r.mensagem, ok: false });
+    alertas.push({ msg: r.mensagem, ok: notaManual });
   } else {
     if (r.chaveAcesso) alertas.push({ msg: `Chave de acesso identificada: ${r.chaveAcesso}`, ok: true });
     if (r.itensDetectados && r.itensDetectados.length) alertas.push({ msg: `Item(ns) potencialmente proibido(s) identificado(s): ${r.itensDetectados.join(', ')}. A despesa será aceita, mas marcada para revisão.`, ok: false });
-    if (r.leituraInsuficiente) alertas.push({ msg: 'Não foi possível ler os dados da nota com confiança. Confira manualmente.', ok: false });
-    if (r.numeroDivergente) alertas.push({ msg: `O número da nota digitado não corresponde ao identificado na imagem (nº ${r.numeroDetectado}).`, ok: false });
+    if (r.leituraInsuficiente) alertas.push({ msg: notaManual ? 'Leitura automática insuficiente — aceito porque foi confirmado como nota escrita à mão.' : 'Não foi possível ler os dados da nota com confiança. Anexe um arquivo mais legível ou marque que se trata de uma nota escrita à mão.', ok: notaManual });
+    else if (!notaManual && r.tipoDocumento === 'desconhecido') alertas.push({ msg: 'O documento anexado não foi reconhecido como NF-e, Cupom Fiscal/NFC-e ou NFS-e. Confira o anexo ou marque que se trata de uma nota escrita à mão.', ok: false });
+    if (r.numeroDivergente) alertas.push({ msg: `O número da nota digitado não corresponde ao identificado no documento (nº ${r.numeroDetectado}).`, ok: notaManual });
+    if (r.valorDivergente) alertas.push({ msg: `O valor digitado não corresponde ao identificado no documento (R$ ${r.valorDetectado.toFixed(2).replace('.', ',')}).`, ok: notaManual });
+    if (r.dataDivergente) alertas.push({ msg: `A data digitada não corresponde à data de emissão identificada no documento (${r.dataDetectada}).`, ok: notaManual });
     if (!alertas.length) alertas.push({ msg: 'Nota lida sem alertas.', ok: true });
   }
   status.innerHTML = alertas.map(a => `<div style="font-size:11px;font-weight:600;border-radius:var(--radius-sm);padding:6px 10px;margin-top:6px;background:${a.ok?'#DCFCE7':'#FEF3C7'};color:${a.ok?'#14532D':'#92400E'}">${a.ok?'✓':'⚠️'} ${a.msg}</div>`).join('');
