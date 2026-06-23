@@ -90,11 +90,44 @@ async function extrairTextoDeArquivo(file) {
 // fiscal" (NF-e, Cupom Fiscal/NFC-e/SAT e NFS-e); o que não se encaixa em nenhum
 // deles e não está marcado como "nota escrita à mão" é tratado como leitura
 // insuficiente — não dá para confirmar a despesa sem saber o que foi anexado.
+// Padrões cobrem as variações reais de impressão de cada modelo (DANFE da NF-e
+// modelo 55; DANFE NFC-e modelo 65/CF-e-SAT/cupom ECF "clássico"; NFS-e — layout
+// varia por prefeitura, mas "NFS-e"/ISSQN são praticamente universais).
 function detectarTipoDocumento(texto) {
-  if (/\bdanfe\b|\bnf-?e\b|nota fiscal eletronica/.test(texto)) return 'nfe';
-  if (/cupom fiscal|extrato n[ºo.]? sat|\bsat\b|nfc-?e/.test(texto)) return 'cupom';
-  if (/nfs-?e|nota fiscal de servi[cç]os? eletr[oô]nica/.test(texto)) return 'nfse';
+  if (/\bdanfe\b|\bnf-?e\b|nota fiscal eletronica|chave de acesso/.test(texto)) return 'nfe';
+  if (/nfc-?e|cupom fiscal|extrato n[ºo.]? sat|\bsat\b|cf-?e[\s-]?sat|emitido por ecf|coo\s*[:\-]?\s*\d/.test(texto)) return 'cupom';
+  // BP-e (Bilhete de Passagem Eletrônico) é tecnicamente da mesma família do
+  // NFC-e (documento fiscal eletrônico ao consumidor final) — tratado como "cupom".
+  if (/bilhete de passagem eletr[oô]nico|\bbp-?e\b/.test(texto)) return 'cupom';
+  if (/nfs-?e|nota fiscal de servi[cç]os? eletr[oô]nica|nota fiscal eletr[oô]nica de servi[cç]os?|issqn|imposto sobre servi[cç]os/.test(texto)) return 'nfse';
+  // Comprovante/espelho de pedágio emitido por concessionária de rodovia: muitas
+  // praças automáticas imprimem um recibo sem chave de acesso fiscal (não é NF-e/
+  // NFC-e/NFS-e), mas ainda é o documento padrão de comprovação desse tipo de gasto.
+  if (/pra[cç]a de ped[aá]gio|concession[aá]ria.{0,20}rodovi|tarifa de ped[aá]gio|sem parar|conectcar|veloe/.test(texto)) return 'pedagio';
   return 'desconhecido';
+}
+
+// ─── CORRELAÇÃO TIPO DE DESPESA × CONTEÚDO DA NOTA ───
+// Cada tipo de despesa tem um vocabulário esperado (ex.: Refeição → "marmita",
+// "self-service"; Reparos/Manutenção → "parafuso", "oficina"). Se a nota citar um
+// termo claramente de OUTRO tipo e nenhum termo do tipo escolhido aparecer, é sinal
+// forte de lançamento no tipo errado (ex.: nota de oficina lançada como Refeição).
+// Não bloqueia o salvamento (a varredura de palavras é sujeita a falso positivo —
+// nem toda nota itemiza o suficiente para confirmar), mas marca para revisão, no
+// mesmo padrão já usado para ITENS_PROIBIDOS.
+function verificarCorrelacaoTipoDespesa(tipoDespesa, textoNormalizado) {
+  const tabela = (typeof CORRELACAO_TIPO_DESPESA !== 'undefined') ? CORRELACAO_TIPO_DESPESA : null;
+  if (!tabela || !tipoDespesa || !tabela[tipoDespesa]) return { tipoDivergente: false, tipoTermoConflitante: null, tipoSugerido: null };
+  const termosProprios = tabela[tipoDespesa].map(normalizarTextoOCR);
+  if (termosProprios.some(t => textoNormalizado.includes(t))) {
+    return { tipoDivergente: false, tipoTermoConflitante: null, tipoSugerido: null };
+  }
+  for (const [outroTipo, termos] of Object.entries(tabela)) {
+    if (outroTipo === tipoDespesa) continue;
+    const termoEncontrado = termos.map(normalizarTextoOCR).find(t => textoNormalizado.includes(t));
+    if (termoEncontrado) return { tipoDivergente: true, tipoTermoConflitante: termoEncontrado, tipoSugerido: outroTipo };
+  }
+  return { tipoDivergente: false, tipoTermoConflitante: null, tipoSugerido: null };
 }
 
 // ─── CHAVE DE ACESSO (NF-e/NFC-e) ───
@@ -176,7 +209,7 @@ function extrairDadosNota(textoOriginal) {
 }
 
 // Compara os dados objetivos da nota com o que o usuário digitou no formulário.
-// `entrada` = { numero, valor (number), data (DD/MM/AAAA) }
+// `entrada` = { numero, valor (number), data (DD/MM/AAAA), tipo (TIPOS_DESPESA) }
 function compararNotaComFormulario(dados, entrada) {
   const soDigitos = s => (s || '').toString().replace(/\D/g, '');
   const numeroDivergente = !!(entrada.numero && dados.numeroDetectado &&
@@ -185,7 +218,9 @@ function compararNotaComFormulario(dados, entrada) {
     Math.abs(entrada.valor - dados.valorDetectado) > 0.01);
   const dataDivergente = !!(entrada.data && dados.dataDetectada &&
     entrada.data !== dados.dataDetectada);
-  return { ...dados, numeroDivergente, valorDivergente, dataDivergente };
+  const { tipoDivergente, tipoTermoConflitante, tipoSugerido } =
+    verificarCorrelacaoTipoDespesa(entrada.tipo, normalizarTextoOCR(dados.textoExtraido));
+  return { ...dados, numeroDivergente, valorDivergente, dataDivergente, tipoDivergente, tipoTermoConflitante, tipoSugerido };
 }
 
 async function analisarNotaFiscal(file, entrada) {

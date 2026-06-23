@@ -1867,7 +1867,7 @@ function renderizarDespesas() {
 }
 
 function temDivergenciaDespesa(d) {
-  return (d.itensProibidosDetectados || []).length > 0 || !!d.leituraOcrInsuficiente || !!d.numeroNfDivergente;
+  return (d.itensProibidosDetectados || []).length > 0 || !!d.leituraOcrInsuficiente || !!d.numeroNfDivergente || !!d.tipoDespesaDivergenteNF;
 }
 
 function cardDespesa(d) {
@@ -1905,6 +1905,7 @@ function cardDespesa(d) {
         ${temItemProibido ? alertaHtml('Item proibido identificado na nota: ' + d.itensProibidosDetectados.join(', ')) : ''}
         ${d.leituraOcrInsuficiente ? alertaHtml('Leitura automática da nota insuficiente — confira os dados manualmente') : ''}
         ${d.numeroNfDivergente ? alertaHtml('Número da nota digitado diverge do identificado na imagem') : ''}
+        ${d.tipoDespesaDivergenteNF ? alertaHtml(`Conteúdo da nota ("${d.tipoDespesaTermoConflitanteNF}") sugere gasto de "${d.tipoDespesaSugeridoNF}", divergente do tipo "${d.tipo}" lançado`) : ''}
         ${d.status === 'reprovada' ? alertaErroHtml('Recusada pelo administrativo: ' + (d.motivoReprovacao || 'motivo não informado')) : ''}
         <div class="card-info">
           <span>📅 ${d.data}</span>
@@ -2063,19 +2064,24 @@ function avancarStep() {
   }
 }
 
-// Só existem 3 tipos de documento fiscal aceitos (NF-e, Cupom Fiscal/NFC-e/SAT e
-// NFS-e) — quando o anexo é um deles, os dados lidos pelo OCR têm que conferir com
-// o que foi digitado. O checkbox "nota escrita à mão" é a única forma de pular essa
-// verificação (recibo manual, sem leitura automática possível, sob responsabilidade
-// do próprio usuário).
+// O número da nota/cupom/comprovante e o anexo de comprovação são exigidos em
+// QUALQUER despesa — inclusive recibo escrito à mão, que não é documento fiscal mas
+// ainda precisa de um número/identificador e de uma foto/anexo como prova do gasto.
+// Só existem 4 tipos de documento aceitos pelo OCR (NF-e, Cupom Fiscal/NFC-e/SAT,
+// NFS-e e comprovante/espelho de pedágio) — quando o anexo é reconhecido como um
+// deles, os dados lidos têm que conferir com o que foi digitado. O checkbox "nota
+// escrita à mão" só pula essa conferência automática (recibo manual, sem leitura
+// confiável possível, sob responsabilidade do próprio usuário) — nunca a exigência
+// de número e anexo, que vale sempre.
 function validarNotaFiscalParaSalvar() {
+  if (!document.getElementById('dNF').value.trim()) return 'Informe o número da nota fiscal, cupom ou do comprovante (obrigatório mesmo em recibo escrito à mão)';
+  if (!OCR_ARQUIVO_ATUAL && !ANEXO_EXISTENTE) return 'Anexe a nota fiscal ou o comprovante da despesa';
   if (document.getElementById('dNFMao').checked) return null;
   if (OCR_EM_ANDAMENTO) return 'Aguarde a análise da nota fiscal terminar';
-  if (!OCR_ARQUIVO_ATUAL && !ANEXO_EXISTENTE) return 'Anexe a nota fiscal ou marque que se trata de uma nota escrita à mão';
   const r = OCR_RESULTADO_ATUAL;
   if (!r) return null;
   if (r.erro || r.leituraInsuficiente) return 'Não foi possível confirmar os dados da nota anexada. Anexe um arquivo mais legível ou marque que se trata de uma nota escrita à mão';
-  if (r.tipoDocumento === 'desconhecido') return 'O arquivo anexado não foi reconhecido como Nota Fiscal Eletrônica, Cupom Fiscal/NFC-e ou Nota Fiscal de Serviço Eletrônico';
+  if (r.tipoDocumento === 'desconhecido') return 'O arquivo anexado não foi reconhecido como Nota Fiscal Eletrônica, Cupom Fiscal/NFC-e/SAT, Nota Fiscal de Serviço Eletrônico ou comprovante de pedágio';
   if (r.numeroDivergente) return `O número digitado não corresponde ao da nota anexada (nº ${r.numeroDetectado})`;
   if (r.valorDivergente) return `O valor digitado não corresponde ao da nota anexada (R$ ${r.valorDetectado.toFixed(2).replace('.', ',')})`;
   if (r.dataDivergente) return `A data digitada não corresponde à data de emissão da nota anexada (${r.dataDetectada})`;
@@ -2129,7 +2135,10 @@ async function abrirEditarDespesa(id) {
       leituraInsuficiente: !!d.leituraOcrInsuficiente,
       numeroDivergente: !!d.numeroNfDivergente,
       valorDivergente: !!d.valorNfDivergente,
-      dataDivergente: !!d.dataNfDivergente
+      dataDivergente: !!d.dataNfDivergente,
+      tipoDivergente: !!d.tipoDespesaDivergenteNF,
+      tipoTermoConflitante: d.tipoDespesaTermoConflitanteNF || null,
+      tipoSugerido: d.tipoDespesaSugeridoNF || null
     };
     renderizarStatusOCR(OCR_RESULTADO_ATUAL);
   }
@@ -2158,7 +2167,10 @@ async function salvarDespesa() {
     leituraOcrInsuficiente: !!ocr?.leituraInsuficiente,
     numeroNfDivergente: !!ocr?.numeroDivergente,
     valorNfDivergente: !!ocr?.valorDivergente,
-    dataNfDivergente: !!ocr?.dataDivergente
+    dataNfDivergente: !!ocr?.dataDivergente,
+    tipoDespesaDivergenteNF: !!ocr?.tipoDivergente,
+    tipoDespesaTermoConflitanteNF: ocr?.tipoTermoConflitante || null,
+    tipoDespesaSugeridoNF: ocr?.tipoSugerido || null
   };
 
   if (DESPESA_EDITANDO_ID) {
@@ -2470,7 +2482,8 @@ function entradaFormularioAtual() {
   return {
     numero: document.getElementById('dNF').value,
     valor: parseFloat((document.getElementById('dValor').value || '0').replace(',', '.')),
-    data: document.getElementById('dData').value
+    data: document.getElementById('dData').value,
+    tipo: document.getElementById('dTipo').value
   };
 }
 
@@ -2509,8 +2522,9 @@ function renderizarStatusOCR(r) {
   } else {
     if (r.chaveAcesso) alertas.push({ msg: `Chave de acesso identificada: ${r.chaveAcesso}`, ok: true });
     if (r.itensDetectados && r.itensDetectados.length) alertas.push({ msg: `Item(ns) potencialmente proibido(s) identificado(s): ${r.itensDetectados.join(', ')}. A despesa será aceita, mas marcada para revisão.`, ok: false });
+    if (r.tipoDivergente) alertas.push({ msg: `O conteúdo do documento ("${r.tipoTermoConflitante}") sugere um gasto de "${r.tipoSugerido}", divergente do tipo selecionado nesta despesa. A despesa será aceita, mas marcada para revisão.`, ok: false });
     if (r.leituraInsuficiente) alertas.push({ msg: notaManual ? 'Leitura automática insuficiente — aceito porque foi confirmado como nota escrita à mão.' : 'Não foi possível ler os dados da nota com confiança. Anexe um arquivo mais legível ou marque que se trata de uma nota escrita à mão.', ok: notaManual });
-    else if (!notaManual && r.tipoDocumento === 'desconhecido') alertas.push({ msg: 'O documento anexado não foi reconhecido como NF-e, Cupom Fiscal/NFC-e ou NFS-e. Confira o anexo ou marque que se trata de uma nota escrita à mão.', ok: false });
+    else if (!notaManual && r.tipoDocumento === 'desconhecido') alertas.push({ msg: 'O documento anexado não foi reconhecido como NF-e, Cupom Fiscal/NFC-e/SAT, NFS-e ou comprovante de pedágio. Confira o anexo ou marque que se trata de uma nota escrita à mão.', ok: false });
     if (r.numeroDivergente) alertas.push({ msg: `O número da nota digitado não corresponde ao identificado no documento (nº ${r.numeroDetectado}).`, ok: notaManual });
     if (r.valorDivergente) alertas.push({ msg: `O valor digitado não corresponde ao identificado no documento (R$ ${r.valorDetectado.toFixed(2).replace('.', ',')}).`, ok: notaManual });
     if (r.dataDivergente) alertas.push({ msg: `A data digitada não corresponde à data de emissão identificada no documento (${r.dataDetectada}).`, ok: notaManual });
@@ -2542,7 +2556,7 @@ function preencherHoje() {
   if (fDe) fDe.value = h;
   if (fAte) fAte.value = h;
 }
-function verificarTipo() {}
+function verificarTipo() { reavaliarOCR(); }
 
 let toastTimer;
 function mostrarToast(msg) {

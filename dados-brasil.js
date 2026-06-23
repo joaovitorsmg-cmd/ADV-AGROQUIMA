@@ -97,6 +97,63 @@ const TIPOS_DESPESA = [
   'Uber','Refeição','Balsa','Hotel','Taxi','Carga/Descarga','Outros'
 ];
 
+// Vocabulário esperado por tipo de despesa — usado pelo OCR para confrontar o
+// conteúdo da nota com o tipo selecionado no lançamento (ex.: uma nota com "parafuso"
+// e nenhum termo de Refeição não é compatível com uma despesa lançada como Refeição).
+// Termos escolhidos para evitar campos padrão de DANFE (frete, peso bruto, transportador
+// etc. aparecem em qualquer NF-e, não são discriminantes) e focar em vocabulário real de
+// estabelecimento/item. Lista expansível pelo TI/financeiro, assim como ITENS_PROIBIDOS.
+// 'Outros' não tem lista própria — aceita qualquer conteúdo.
+const CORRELACAO_TIPO_DESPESA = {
+  'Refeição': [
+    'restaurante','lanchonete','padaria','pizzaria','churrascaria','hamburgueria',
+    'cafeteria','buffet','self-service','self service','rodízio','marmita','marmitex',
+    'prato feito','refeição','almoço','jantar','café da manhã','salgados','espetinho',
+    'sorveteria','sanduíches','comida','suco de laranja','suco natural','prato do dia','couvert'
+  ],
+  'Combustível': [
+    'combustível','gasolina','etanol','álcool combustível','óleo diesel','diesel s10',
+    'gnv','posto de combustível','posto de gasolina','abastecimento de veículo','frentista','arla 32'
+  ],
+  'Lubrificante': [
+    'lubrificante','óleo lubrificante','óleo de motor','graxa automotiva','troca de óleo',
+    'óleo 5w30','óleo 20w50','filtro de óleo'
+  ],
+  'Pedágio': [
+    'pedágio','praça de pedágio','concessionária de rodovia','tarifa de pedágio',
+    'categoria de veículo','sem parar','conectcar','veloe','antt','artesp','agetop',
+    'ecovias','autopista','comprovante de pedágio'
+  ],
+  'Ônibus': [
+    'ônibus','passagem rodoviária','rodoviária','viação','bilhete de passagem','bp-e',
+    'plataforma de embarque','poltrona','trecho rodoviário'
+  ],
+  'Reparos/Manutenção': [
+    'oficina mecânica','mecânico','autopeças','parafuso','porca','arruela','rolamento',
+    'correia dentada','troca de pneu','alinhamento e balanceamento','revisão veicular',
+    'retífica de motor','funilaria','pintura automotiva','pastilha de freio','amortecedor',
+    'suspensão','vela de ignição','bateria automotiva','borracharia','chapeação'
+  ],
+  'Uber': [
+    'uber','99 pop','corrida solicitada','motorista parceiro','aplicativo de transporte','tarifa dinâmica'
+  ],
+  'Taxi': [
+    'táxi','taxímetro','cooperativa de táxi','corrida de táxi'
+  ],
+  'Balsa': [
+    'balsa','travessia fluvial','ferry boat','embarque de veículo','outorga de travessia'
+  ],
+  'Hotel': [
+    'hotel','pousada','hospedagem','diária','check-in','check-out','hóspede','pernoite',
+    'apartamento','suíte','flat'
+  ],
+  'Carga/Descarga': [
+    'serviço de carga','descarga de mercadoria','carga e descarga','estiva',
+    'ajudante de carga','paletização','empilhadeira','movimentação de carga',
+    'conferência de carga','carregamento de mercadoria','descarregamento de mercadoria'
+  ]
+};
+
 const TIPOS_ATIVIDADE = [
   'Visita a clientes','Prospecção','Reunião interna','Treinamento',
   'Auditoria','Evento/Feira','Entrega de produto','Outros'
