@@ -413,6 +413,7 @@ body {
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <div class="offline-badge" id="offlineBadge">⚡ Offline</div>
+          <button class="btn-icon" onclick="abrirNotificacoes()" style="position:relative">🔔<span id="notifBadge" style="display:none;position:absolute;top:3px;right:3px;width:9px;height:9px;border-radius:50%;background:var(--vermelho);border:2px solid var(--azul)"></span></button>
           <button class="btn-icon" onclick="irPara('pPerfil')">👤</button>
         </div>
       </div>
@@ -435,8 +436,11 @@ body {
       </div>
     </div>
 
+    <!-- Banner de status do ADV (bloqueio durante análise / liberação para assinatura final) -->
+    <div class="section mt12" id="advStatusBanner" style="display:none"></div>
+
     <!-- Botão Nova Despesa -->
-    <div class="section mt12">
+    <div class="section mt12" id="btnNovaDespesaWrap">
       <button class="btn-nova" onclick="abrirModalDespesa()">
         <span class="btn-nova-texto">Nova despesa</span>
         <span class="btn-nova-icone">→</span>
@@ -896,6 +900,46 @@ body {
   </div>
 </div>
 
+<!-- Modal: Notificações -->
+<div class="modal-overlay" id="modalNotificacoes">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <button onclick="fecharModal('modalNotificacoes')" style="background:none;border:none;font-size:20px;color:var(--cinza);cursor:pointer">←</button>
+      <div class="modal-titulo">Notificações</div>
+    </div>
+    <div class="modal-body" id="listaNotificacoes"></div>
+    <div style="height:12px"></div>
+  </div>
+</div>
+
+<!-- Modal: Resumo final do ADV e assinatura digital de fechamento -->
+<div class="modal-overlay" id="modalFinalizarADV">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <button onclick="fecharModal('modalFinalizarADV')" style="background:none;border:none;font-size:20px;color:var(--cinza);cursor:pointer">←</button>
+      <div class="modal-titulo">Resumo e fechamento do ADV</div>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:14px;color:var(--texto);line-height:1.5;margin-bottom:12px">
+        O administrativo concluiu a análise das despesas deste ADV. Confira o resultado abaixo antes de confirmar o fechamento.
+      </div>
+      <div id="fzResumoLista"></div>
+      <div id="fzResumoTotais" style="margin-top:12px;font-size:13px;font-weight:600"></div>
+      <div class="checkbox-row mt16">
+        <input type="checkbox" id="fzConfirmoCheckbox" onchange="document.getElementById('btnAssinarADV').disabled = !this.checked">
+        <label for="fzConfirmoCheckbox">Revisei os dados acima diretamente no aplicativo e confirmo o resultado deste fechamento.</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secundario" onclick="baixarPdfADV()">📄 Baixar PDF do resumo</button>
+      <button class="btn-primario" id="btnAssinarADV" onclick="assinarFechamentoADV()" disabled>Concordar e assinar digitalmente</button>
+    </div>
+    <div style="height:12px"></div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -919,6 +963,12 @@ let OCR_RESULTADO_ATUAL = null;
 let PA_TIPO = 'representante';
 let PA_IDENTIFICADOR_VERIFICADO = null;
 let DESPESA_EDITANDO_ID = null;
+// Status do ADV: 'aberto' (despesas livres) | 'aguardando_aprovacao' (autorizado pelo usuário,
+// bloqueado até o administrativo concluir no Intra) | 'concluido' (aguardando assinatura final
+// do usuário) | 'assinado' (fechamento confirmado e assinado digitalmente).
+let ADV_STATUS = 'aberto';
+let NOTIFICACOES = [];
+let POLL_ATUALIZACOES_ADV = null;
 
 // ─── SERVICE WORKER ───
 if ('serviceWorker' in navigator) {
@@ -935,7 +985,7 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-window.addEventListener('online', () => { IS_ONLINE = true; atualizarStatusOnline(); sincronizarPendentes(); });
+window.addEventListener('online', () => { IS_ONLINE = true; atualizarStatusOnline(); sincronizarPendentes(); verificarAtualizacoesADV(); });
 window.addEventListener('offline', () => { IS_ONLINE = false; atualizarStatusOnline(); });
 
 function atualizarStatusOnline() {
@@ -966,6 +1016,8 @@ function carregarDadosUsuario() {
   DESPESAS = JSON.parse(localStorage.getItem(chaveDados('despesas')) || '[]');
   ATIVIDADES = JSON.parse(localStorage.getItem(chaveDados('atividades')) || '[]');
   PENDENTES_SYNC = JSON.parse(localStorage.getItem(chaveDados('pendentes')) || '[]');
+  ADV_STATUS = localStorage.getItem(chaveDados('adv_status')) || 'aberto';
+  NOTIFICACOES = JSON.parse(localStorage.getItem(chaveDados('notificacoes')) || '[]');
   popularDados_mockados_se_vazio();
 }
 
@@ -1049,11 +1101,15 @@ function mostrarApp() {
   popularSelects();
   preencherHoje();
   verificarTermoUso();
+  atualizarBadgeNotificacoes();
+  verificarAtualizacoesADV();
+  if (!POLL_ATUALIZACOES_ADV) POLL_ATUALIZACOES_ADV = setInterval(verificarAtualizacoesADV, 60000);
 }
 
 function fazerLogout() {
   localStorage.removeItem('agroquima_usuario');
   USUARIO = null;
+  if (POLL_ATUALIZACOES_ADV) { clearInterval(POLL_ATUALIZACOES_ADV); POLL_ATUALIZACOES_ADV = null; }
   document.getElementById('pLogin').style.display = '';
   document.getElementById('appWrapper').style.display = 'none';
   location.reload();
@@ -1208,12 +1264,232 @@ async function confirmarFechamentoDespesa() {
       ? { ...d, fechamentoAutorizadoPeloUsuario: true, fechamentoAutorizadoEm: agora }
       : d);
     salvarDespesas();
+    // A partir daqui o ADV fica bloqueado para inclusão/edição/exclusão — evita que o
+    // usuário altere dados no aplicativo enquanto o administrativo está revisando as
+    // mesmas despesas no Intra, o que poderia fazer as informações não baterem.
+    ADV_STATUS = 'aguardando_aprovacao';
+    salvarAdvStatus();
     renderizarDespesas();
     fecharModal('modalFecharDespesa');
-    mostrarToast('🔒 Fechamento do ADV autorizado');
+    mostrarToast('🔒 Fechamento do ADV autorizado — despesas bloqueadas até a conclusão da análise pelo administrativo');
+    verificarAtualizacoesADV();
   } catch (e) {
     mostrarToast(e.message || 'Não foi possível registrar a autorização');
   }
+}
+
+// ─── BLOQUEIO DO ADV (entre a autorização do usuário e a conclusão da análise no Intra) ───
+function advBloqueado() {
+  return ADV_STATUS !== 'aberto';
+}
+function salvarAdvStatus() {
+  localStorage.setItem(chaveDados('adv_status'), ADV_STATUS);
+}
+
+function atualizarBannerAdv() {
+  const banner = document.getElementById('advStatusBanner');
+  const wrapNova = document.getElementById('btnNovaDespesaWrap');
+  if (!banner) return;
+  if (ADV_STATUS === 'aguardando_aprovacao') {
+    banner.style.display = '';
+    banner.innerHTML = `<div class="card" style="padding:14px;font-size:13px;color:#92400E;background:#FEF3C7;font-weight:600">🔒 Fechamento em análise pelo administrativo no Intra. Novas despesas e edições ficam bloqueadas até a conclusão.</div>`;
+  } else if (ADV_STATUS === 'concluido') {
+    banner.style.display = '';
+    banner.innerHTML = `<div class="card" style="padding:14px;font-size:13px;color:var(--texto)"><div style="font-weight:700;margin-bottom:8px">✅ Análise concluída pelo administrativo</div>Revise o resumo do fechamento e confirme com sua assinatura digital.<div class="mt12"><button class="btn-primario" onclick="abrirFinalizacaoADV()">Ver resumo e assinar</button></div></div>`;
+  } else if (ADV_STATUS === 'assinado') {
+    banner.style.display = '';
+    banner.innerHTML = `<div class="card" style="padding:14px;font-size:13px;color:var(--verde);font-weight:600">✔️ Fechamento deste ADV confirmado e assinado digitalmente.</div>`;
+  } else {
+    banner.style.display = 'none';
+  }
+  if (wrapNova) wrapNova.style.display = advBloqueado() ? 'none' : '';
+}
+
+// ─── NOTIFICAÇÕES (avisos de decisões do administrativo sobre as despesas/ADV) ───
+function registrarNotificacao(tipo, titulo, mensagem) {
+  NOTIFICACOES.unshift({ id: gerarId(), tipo, titulo, mensagem, lida: false, criadoEm: new Date().toISOString() });
+  salvarNotificacoes();
+  atualizarBadgeNotificacoes();
+  mostrarToast(titulo);
+}
+function salvarNotificacoes() {
+  localStorage.setItem(chaveDados('notificacoes'), JSON.stringify(NOTIFICACOES));
+}
+function atualizarBadgeNotificacoes() {
+  const badge = document.getElementById('notifBadge');
+  if (!badge) return;
+  badge.style.display = NOTIFICACOES.some(n => !n.lida) ? '' : 'none';
+}
+function abrirNotificacoes() {
+  const lista = document.getElementById('listaNotificacoes');
+  lista.innerHTML = NOTIFICACOES.length === 0
+    ? `<div class="empty"><div class="empty-icon">🔔</div><div class="empty-titulo">Nenhuma notificação</div></div>`
+    : NOTIFICACOES.map(n => `
+      <div class="card" style="margin-bottom:10px;padding:14px">
+        <div style="font-weight:700;font-size:13px">${n.titulo}</div>
+        <div style="font-size:12px;color:var(--texto-suave);margin-top:4px">${n.mensagem}</div>
+        <div style="font-size:11px;color:var(--cinza);margin-top:6px">${new Date(n.criadoEm).toLocaleString('pt-BR')}</div>
+      </div>`).join('');
+  NOTIFICACOES.forEach(n => n.lida = true);
+  salvarNotificacoes();
+  atualizarBadgeNotificacoes();
+  document.getElementById('modalNotificacoes').classList.add('aberto');
+}
+
+// ─── ATUALIZAÇÕES DO ADMINISTRATIVO (status final de cada despesa, vindas do Intra) ───
+// Em modo mock não existe um Intra real integrado: buscarDadosUsuario() sempre retorna
+// null, então este polling não altera nada localmente — é o ponto de entrada já pronto
+// para quando a API real (modo 'producao') passar a expor o status atualizado de cada
+// despesa (aprovada/reprovada + motivo) vindo do Intra.
+async function verificarAtualizacoesADV() {
+  if (!IS_ONLINE || !USUARIO || ADV_STATUS !== 'aguardando_aprovacao') return;
+  try {
+    const dados = await DESPESAS_API.buscarDadosUsuario(USUARIO.identificador);
+    if (dados && Array.isArray(dados.despesas)) aplicarAtualizacoesDespesas(dados.despesas);
+  } catch (e) { /* tenta novamente no próximo ciclo */ }
+}
+
+function aplicarAtualizacoesDespesas(despesasAtualizadas) {
+  DESPESAS = DESPESAS.map(local => {
+    const atualizada = despesasAtualizadas.find(r => r.id === local.id);
+    if (!atualizada || atualizada.status === local.status) return local;
+    if (atualizada.status === 'reprovada') {
+      registrarNotificacao('reprovada', `Despesa NF ${local.nf || '—'} recusada`, atualizada.motivoReprovacao || 'Motivo não informado pelo administrativo.');
+    } else if (atualizada.status === 'aprovada') {
+      registrarNotificacao('aprovada', `Despesa NF ${local.nf || '—'} aprovada`, 'Sua despesa foi aprovada pelo administrativo.');
+    }
+    return { ...local, status: atualizada.status, motivoReprovacao: atualizada.motivoReprovacao || null };
+  });
+  salvarDespesas();
+  verificarConclusaoADV();
+  renderizarDespesas();
+}
+
+function verificarConclusaoADV() {
+  if (ADV_STATUS !== 'aguardando_aprovacao') return;
+  const autorizadas = DESPESAS.filter(d => d.fechamentoAutorizadoPeloUsuario);
+  const todasResolvidas = autorizadas.length > 0 && autorizadas.every(d => d.status === 'aprovada' || d.status === 'reprovada');
+  if (!todasResolvidas) return;
+  ADV_STATUS = 'concluido';
+  salvarAdvStatus();
+  registrarNotificacao('concluido', 'Análise do ADV concluída', 'O administrativo concluiu a análise de todas as despesas. Revise o resumo e confirme o fechamento.');
+}
+
+// Hook apenas para testes locais em modo mock (não é exposto na interface) — simula a
+// chegada das decisões do administrativo, que em produção viriam de fato do Intra.
+window._simularDecisaoAdminADV = function (decisoes) { aplicarAtualizacoesDespesas(decisoes); };
+
+// ─── RESUMO FINAL E ASSINATURA DIGITAL DO FECHAMENTO DO ADV ───
+function gerarResumoADV() {
+  const despesas = DESPESAS.filter(d => d.fechamentoAutorizadoPeloUsuario);
+  const aprovadas = despesas.filter(d => d.status === 'aprovada');
+  const reprovadas = despesas.filter(d => d.status === 'reprovada');
+  return {
+    adv: document.getElementById('advNum')?.textContent || '',
+    identificador: USUARIO?.identificador || '',
+    nome: USUARIO?.nome || '',
+    geradoEm: new Date().toISOString(),
+    despesas: despesas.map(d => ({
+      id: d.id, nf: d.nf, tipo: d.tipo, data: d.data, municipio: d.municipio, uf: d.uf,
+      valor: d.valor, status: d.status, motivoReprovacao: d.motivoReprovacao || null
+    })),
+    totalAprovado: aprovadas.reduce((s, d) => s + (d.valor || 0), 0),
+    totalReprovado: reprovadas.reduce((s, d) => s + (d.valor || 0), 0)
+  };
+}
+
+function abrirFinalizacaoADV() {
+  const resumo = gerarResumoADV();
+  const linhaDespesa = (d) => `
+    <div class="card-row" style="padding:8px 0;border-bottom:1px solid var(--borda)">
+      <div>
+        <div style="font-size:13px;font-weight:600">NF ${d.nf || '—'} · ${d.tipo}</div>
+        <div style="font-size:11px;color:var(--cinza)">${d.data} · ${d.municipio}-${d.uf}${d.status === 'reprovada' ? ' · Motivo: ' + (d.motivoReprovacao || 'não informado') : ''}</div>
+      </div>
+      <div style="margin-left:auto;text-align:right">
+        <div style="font-size:13px;font-weight:700">R$ ${(d.valor || 0).toFixed(2).replace('.', ',')}</div>
+        <div style="font-size:11px;color:${d.status === 'reprovada' ? 'var(--vermelho)' : 'var(--verde)'}">${d.status === 'reprovada' ? 'Recusada' : 'Aprovada'}</div>
+      </div>
+    </div>`;
+  document.getElementById('fzResumoLista').innerHTML = resumo.despesas.map(linhaDespesa).join('') || '<div class="empty-sub">Nenhuma despesa neste fechamento.</div>';
+  document.getElementById('fzResumoTotais').innerHTML = `
+    <div>Total aprovado: <span style="color:var(--verde)">R$ ${resumo.totalAprovado.toFixed(2).replace('.', ',')}</span></div>
+    <div>Total recusado: <span style="color:var(--vermelho)">R$ ${resumo.totalReprovado.toFixed(2).replace('.', ',')}</span></div>`;
+  document.getElementById('fzConfirmoCheckbox').checked = false;
+  document.getElementById('btnAssinarADV').disabled = true;
+  document.getElementById('modalFinalizarADV').classList.add('aberto');
+}
+
+// Monta um PDF simples com o resultado do fechamento — usado tanto para o usuário
+// baixar/conferir quanto como comprovante anexado à assinatura digital (respaldo).
+async function montarPdfADV(resumo) {
+  if (!window.jspdf) await carregarScript('https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js');
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  let y = 16;
+  doc.setFontSize(14);
+  doc.text('ADV AGROQUIMA — Resumo de fechamento', 14, y); y += 8;
+  doc.setFontSize(10);
+  doc.text(`Adiantamento: ${resumo.adv}`, 14, y); y += 6;
+  doc.text(`Colaborador: ${resumo.nome} (${resumo.identificador})`, 14, y); y += 6;
+  doc.text(`Gerado em: ${new Date(resumo.geradoEm).toLocaleString('pt-BR')}`, 14, y); y += 10;
+  resumo.despesas.forEach(d => {
+    if (y > 270) { doc.addPage(); y = 16; }
+    doc.setTextColor(0, 0, 0);
+    doc.text(`NF ${d.nf || '—'} · ${d.tipo} · ${d.data} · R$ ${(d.valor || 0).toFixed(2).replace('.', ',')} · ${d.status === 'aprovada' ? 'Aprovada' : 'Recusada'}`, 14, y);
+    y += 6;
+    if (d.status === 'reprovada') {
+      doc.setTextColor(180, 40, 40);
+      doc.text(`   Motivo: ${d.motivoReprovacao || 'não informado'}`, 14, y);
+      doc.setTextColor(0, 0, 0);
+      y += 6;
+    }
+  });
+  y += 4;
+  doc.setFontSize(11);
+  doc.text(`Total aprovado: R$ ${resumo.totalAprovado.toFixed(2).replace('.', ',')}`, 14, y); y += 6;
+  doc.text(`Total recusado: R$ ${resumo.totalReprovado.toFixed(2).replace('.', ',')}`, 14, y); y += 10;
+  if (resumo.assinatura) {
+    doc.setFontSize(9);
+    doc.text(`Assinado digitalmente por ${resumo.assinatura.nome} (${resumo.assinatura.identificador}) em ${new Date(resumo.assinatura.dataHora).toLocaleString('pt-BR')}.`, 14, y); y += 5;
+    doc.text(`Código de verificação: ${resumo.assinatura.hash.slice(0, 16)}`, 14, y);
+  }
+  return doc;
+}
+
+async function baixarPdfADV() {
+  try {
+    const resumo = gerarResumoADV();
+    const assinatura = JSON.parse(localStorage.getItem(chaveDados('assinatura_adv')) || 'null');
+    if (assinatura) resumo.assinatura = assinatura;
+    const doc = await montarPdfADV(resumo);
+    doc.save(`ADV_${(resumo.adv || '').replace('#', '')}_fechamento.pdf`);
+  } catch (e) {
+    mostrarToast('Não foi possível gerar o PDF agora. Tente novamente.');
+  }
+}
+
+// Assinatura digital simples (toque + confirmação), com registro de identificador,
+// data/hora e hash do resumo exibido — dá respaldo à confirmação sem exigir do
+// usuário nada mais complexo que um único toque, importante para quem tem pouca
+// familiaridade com celular.
+async function assinarFechamentoADV() {
+  if (!document.getElementById('fzConfirmoCheckbox').checked) return;
+  const resumo = gerarResumoADV();
+  const hash = await sha256Hex(JSON.stringify(resumo));
+  try {
+    await DESPESAS_API.confirmarFechamentoADV(USUARIO?.identificador, hash);
+  } catch (e) {
+    mostrarToast(e.message || 'Não foi possível registrar a assinatura. Tente novamente.');
+    return;
+  }
+  const assinatura = { nome: USUARIO?.nome, identificador: USUARIO?.identificador, dataHora: new Date().toISOString(), hash };
+  localStorage.setItem(chaveDados('assinatura_adv'), JSON.stringify(assinatura));
+  ADV_STATUS = 'assinado';
+  salvarAdvStatus();
+  fecharModal('modalFinalizarADV');
+  renderizarDespesas();
+  mostrarToast('✔️ Fechamento do ADV confirmado e assinado digitalmente');
 }
 
 function configurarNav() {
@@ -1258,6 +1534,7 @@ function renderizarDespesas() {
   if (DESPESAS.length === 0) {
     lista.innerHTML = `<div class="empty"><div class="empty-icon">💳</div><div class="empty-titulo">Não possui despesas cadastradas</div><div class="empty-sub">Adicione uma nova despesa</div></div>`;
     if (wrapAdv) wrapAdv.style.display = 'none';
+    atualizarBannerAdv();
     return;
   }
   const meses = {};
@@ -1273,8 +1550,9 @@ function renderizarDespesas() {
 
   if (wrapAdv) {
     const pendentesAutorizacao = DESPESAS.filter(d => d.status !== 'reprovada' && !d.fechamentoAutorizadoPeloUsuario);
-    wrapAdv.style.display = pendentesAutorizacao.length > 0 ? '' : 'none';
+    wrapAdv.style.display = pendentesAutorizacao.length > 0 && !advBloqueado() ? '' : 'none';
   }
+  atualizarBannerAdv();
 
   // Atualizar saldos
   const consumido = DESPESAS.reduce((s, d) => s + (d.valor || 0), 0);
@@ -1293,8 +1571,11 @@ function cardDespesa(d) {
   const b = badges[d.status] || 'badge-analise';
   const l = labels[d.status] || 'Em Análise';
   const alertaHtml = (txt) => `<div style="background:#FEF3C7;color:#92400E;font-size:11px;font-weight:600;border-radius:var(--radius-sm);padding:6px 10px;margin-top:8px">⚠️ ${txt}</div>`;
+  const alertaErroHtml = (txt) => `<div style="background:#FEE2E2;color:#991B1B;font-size:11px;font-weight:600;border-radius:var(--radius-sm);padding:6px 10px;margin-top:8px">❌ ${txt}</div>`;
   const temItemProibido = (d.itensProibidosDetectados || []).length > 0;
-  const podeEditar = temDivergenciaDespesa(d) && !d.fechamentoAutorizadoPeloUsuario;
+  // Despesa pode ser editada/excluída enquanto o ADV não tiver sido autorizado para
+  // fechamento — depois disso fica bloqueada até o administrativo concluir no Intra.
+  const podeEditar = !advBloqueado();
   return `
     <div class="card" style="margin-bottom:10px">
       <div class="card-header">
@@ -1306,8 +1587,8 @@ function cardDespesa(d) {
           <button onclick="toggleMenu('menu_${d.id}')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--cinza);padding:4px">⋯</button>
           <div id="menu_${d.id}" style="display:none;position:absolute;right:0;top:30px;background:white;border-radius:var(--radius-sm);box-shadow:0 4px 16px rgba(0,0,0,0.15);z-index:50;min-width:140px">
             ${podeEditar ? `<div onclick="abrirEditarDespesa('${d.id}')" style="padding:12px 16px;font-size:14px;cursor:pointer;border-bottom:1px solid var(--borda)">✏️ Editar</div>` : ''}
-            <div onclick="verAnexo('${d.id}')" style="padding:12px 16px;font-size:14px;cursor:pointer;border-bottom:1px solid var(--borda)">Ver anexo</div>
-            <div onclick="excluirDespesa('${d.id}')" style="padding:12px 16px;font-size:14px;cursor:pointer;color:var(--vermelho)">Excluir</div>
+            <div onclick="verAnexo('${d.id}')" style="padding:12px 16px;font-size:14px;cursor:pointer;${podeEditar ? 'border-bottom:1px solid var(--borda)' : ''}">Ver anexo</div>
+            ${podeEditar ? `<div onclick="excluirDespesa('${d.id}')" style="padding:12px 16px;font-size:14px;cursor:pointer;color:var(--vermelho)">Excluir</div>` : ''}
           </div>
         </div>
       </div>
@@ -1319,6 +1600,7 @@ function cardDespesa(d) {
         ${temItemProibido ? alertaHtml('Item proibido identificado na nota: ' + d.itensProibidosDetectados.join(', ')) : ''}
         ${d.leituraOcrInsuficiente ? alertaHtml('Leitura automática da nota insuficiente — confira os dados manualmente') : ''}
         ${d.numeroNfDivergente ? alertaHtml('Número da nota digitado diverge do identificado na imagem') : ''}
+        ${d.status === 'reprovada' ? alertaErroHtml('Recusada pelo administrativo: ' + (d.motivoReprovacao || 'motivo não informado')) : ''}
         <div class="card-info">
           <span>📅 ${d.data}</span>
           <span>📍 ${d.municipio} - ${d.uf}</span>
@@ -1343,6 +1625,7 @@ document.addEventListener('click', e => {
 });
 
 function excluirDespesa(id) {
+  if (advBloqueado()) { mostrarToast('Despesas bloqueadas até a conclusão da análise do ADV pelo administrativo'); return; }
   if (!confirm('Deseja excluir essa despesa?\nEssa ação é irreversível.')) return;
   DESPESAS = DESPESAS.filter(d => d.id !== id);
   salvarDespesas();
@@ -1403,6 +1686,7 @@ async function excluirAnexo(despesaId) {
 
 // ─── MODAL DESPESA ───
 function abrirModalDespesa() {
+  if (advBloqueado()) { mostrarToast('Despesas bloqueadas até a conclusão da análise do ADV pelo administrativo'); return; }
   STEP_ATUAL = 1;
   atualizarStep();
   limparFormDespesa();
@@ -1477,8 +1761,9 @@ function atualizarStep() {
   document.getElementById('step2').className = 'step ' + (STEP_ATUAL === 2 ? 'ativo' : '');
 }
 
-// ─── EDITAR DESPESA (disponível quando há divergência sinalizada pela leitura automática) ───
+// ─── EDITAR DESPESA (disponível até o ADV ser autorizado para fechamento) ───
 async function abrirEditarDespesa(id) {
+  if (advBloqueado()) { mostrarToast('Despesas bloqueadas até a conclusão da análise do ADV pelo administrativo'); return; }
   const d = DESPESAS.find(x => x.id === id);
   if (!d) return;
   STEP_ATUAL = 1;

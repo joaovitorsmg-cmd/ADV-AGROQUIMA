@@ -1,5 +1,5 @@
-const CACHE_NAME = 'agroquima-v3';
-const RUNTIME_CACHE = 'agroquima-runtime-v3';
+const CACHE_NAME = 'agroquima-v4';
+const RUNTIME_CACHE = 'agroquima-runtime-v4';
 const SYNC_TAG = 'agrowa-sync';
 
 const ASSETS = [
