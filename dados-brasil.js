@@ -77,20 +77,57 @@ const MUNICIPIOS = {
 };
 
 // Filiais Agroquima (mockadas - ajustar com dados reais)
+// Lista oficial de filiais da Agroquima, extraída diretamente do Intra (código + sigla).
+// O Intra não exibe o nome completo da cidade em nenhuma tela — só "NN - SIGLA" — então as
+// filiais abaixo cujo nome da cidade ainda não foi confirmado ficam apenas com o código/sigla,
+// para não cadastrar informação inventada. Complete o nome conforme for confirmando com a TI.
 const FILIAIS = [
-  {id:'ADM',nome:'Administração - GO (ADM)'},
-  {id:'RVD',nome:'Rio Verde - GO (RVD)'},
-  {id:'JAT',nome:'Jataí - GO (JAT)'},
-  {id:'ANP',nome:'Anápolis - GO (ANP)'},
-  {id:'LUZ',nome:'Luziânia - GO (LUZ)'},
-  {id:'CAT',nome:'Catalão - GO (CAT)'},
-  {id:'ITA',nome:'Itumbiara - GO (ITA)'},
-  {id:'BEL',nome:'Belém - PA (BEL)'},
-  {id:'PAL',nome:'Palmas - TO (PAL)'},
-  {id:'CUI',nome:'Cuiabá - MT (CUI)'},
-  {id:'UBE',nome:'Uberaba - MG (UBE)'},
-  {id:'UBL',nome:'Uberlândia - MG (UBL)'},
+  {id:'1-MTZ',nome:'1 - MTZ'},
+  {id:'2-TIR',nome:'2 - TIR'},
+  {id:'3-ARG',nome:'3 - ARG'},
+  {id:'4-RVD',nome:'Rio Verde - GO (4-RVD)'},
+  {id:'5-UBR',nome:'5 - UBR'},
+  {id:'10-MAR',nome:'10 - MAR'},
+  {id:'11-JAT',nome:'Jataí - GO (11-JAT)'},
+  {id:'12-CRI',nome:'12 - CRI'},
+  {id:'13-FAG',nome:'13 - FAG'},
+  {id:'14-RED',nome:'14 - RED'},
+  {id:'15-MIN',nome:'15 - MIN'},
+  {id:'16-IMP',nome:'16 - IMP'},
+  {id:'17-BAR',nome:'17 - BAR'},
+  {id:'18-ADM',nome:'Administração - GO (18-ADM)'},
+  {id:'19-PAL',nome:'Palmas - TO (19-PAL)'},
+  {id:'20-CBA',nome:'20 - CBA'},
+  {id:'21-MOZ',nome:'Mozarlândia - GO (21-MOZ)'},
+  {id:'22-PGM',nome:'22 - PGM'},
+  {id:'23-SFX',nome:'23 - SFX'},
+  {id:'24-FAP',nome:'24 - FAP'},
+  {id:'25-FCB',nome:'25 - FCB'},
+  {id:'26-UNA',nome:'26 - UNA'},
+  {id:'27-URU',nome:'27 - URU'},
+  {id:'28-MOR',nome:'28 - MOR'},
+  {id:'29-CON',nome:'29 - CON'},
+  {id:'30-FOR',nome:'30 - FOR'},
+  {id:'31-JUS',nome:'31 - JUS'},
+  {id:'32-XRA',nome:'32 - XRA'},
+  {id:'33-VNP',nome:'33 - VNP'},
+  {id:'34-POR',nome:'34 - POR'},
+  {id:'35-PLA',nome:'35 - PLA'},
+  {id:'36-GRA',nome:'36 - GRA'},
+  {id:'37-CAN',nome:'37 - CAN'},
+  {id:'38-GUR',nome:'38 - GUR'},
+  {id:'39-GUA',nome:'39 - GUA'},
+  {id:'40-RIA',nome:'40 - RIA'},
+  {id:'41-ALT',nome:'41 - ALT'},
+  {id:'42-IND',nome:'42 - IND'},
 ];
+
+// Converte o código de filial (ex: "21-MOZ") no nome de exibição cadastrado em FILIAIS,
+// ou devolve o próprio código quando ainda não há nome confirmado.
+function nomeFilial(codigo) {
+  const f = FILIAIS.find(f => f.id === codigo);
+  return f ? f.nome : (codigo || '');
+}
 
 const TIPOS_DESPESA = [
   'Combustível','Lubrificante','Pedágio','Ônibus','Reparos/Manutenção',
@@ -170,8 +207,8 @@ const ITENS_PROIBIDOS = [
 // Em produção, a verificação de pré-cadastro deve chamar a API real (token Fernando/TI)
 // em vez desta lista local — ver API_CONFIG em api.js.
 const PRE_CADASTRADOS_DEMO = [
-  { tipo: 'representante', identificador: '00000000000100' },
-  { tipo: 'estagiario', identificador: '00000000000' },
-  { tipo: 'clt', identificador: 'joao.mendes@agroquima.com.br' },
-  { tipo: 'clt', identificador: 'gerente.rv@agroquima.com.br' }
+  { tipo: 'representante', identificador: '00000000000100', filial: '21-MOZ' },
+  { tipo: 'estagiario', identificador: '00000000000', filial: '4-RVD' },
+  { tipo: 'clt', identificador: 'joao.mendes@agroquima.com.br', filial: '18-ADM' },
+  { tipo: 'clt', identificador: 'gerente.rv@agroquima.com.br', filial: '4-RVD' }
 ];

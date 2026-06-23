@@ -1135,7 +1135,7 @@ function configurarPerfil() {
   document.getElementById('perfilNome').textContent = nome;
   document.getElementById('perfilCargo').textContent = USUARIO.cargo || (USUARIO.tipo === 'representante' ? 'Representante Comercial' : USUARIO.tipo === 'estagiario' ? 'Estagiário' : 'Colaborador');
   document.getElementById('perfilEmail').textContent = USUARIO.email || USUARIO.identificador || '—';
-  document.getElementById('perfilFilial').textContent = USUARIO.filial || 'Administração - GO (ADM)';
+  document.getElementById('perfilFilial').textContent = nomeFilial(USUARIO.filial) || 'Administração - GO (18-ADM)';
   document.getElementById('perfilTipo').textContent = { representante:'Representante (PJ)', estagiario:'Estagiário', clt:'Colaborador CLT', gestor:'Gestor / Gerente' }[USUARIO.tipo] || USUARIO.tipo;
   const termo = localStorage.getItem(chaveDados('termo'));
   document.getElementById('perfilTermoData').textContent = termo ? new Date(termo).toLocaleDateString('pt-BR') : '—';
@@ -1424,7 +1424,7 @@ function gerarResumoADV() {
     identificador: USUARIO?.identificador || '',
     nome: USUARIO?.nome || '',
     cargo: document.getElementById('perfilCargo')?.textContent || '',
-    filial: USUARIO?.filial || '',
+    filial: nomeFilial(USUARIO?.filial) || '',
     valorAdiantamento: ADV_VALOR_ADIANTAMENTO,
     valorConsumido: consumidoTotal,
     valorDisponivel: ADV_VALOR_ADIANTAMENTO - consumidoTotal,

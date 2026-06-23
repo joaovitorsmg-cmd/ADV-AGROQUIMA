@@ -15,6 +15,48 @@
 // novo só é possível de fato quando a API real estiver plugada (modo 'producao'),
 // pois aí os dados passam a vir do servidor da Agroquima, não do localStorage.
 // ═══════════════════════════════════════════════════════════════════════
+//
+// ─── CONTRATO DE INTEGRAÇÃO COM O INTRA (rascunho — só documentação, nada aqui muda
+// o comportamento atual) ───
+// Levantado a partir de um HAR real do Intra (sistema em JSF/PrimeFaces, sem API
+// REST/JSON hoje — tudo é postback de tela). Quando o TI expuser a API real, é isto
+// que cada endpoint precisa receber/enviar:
+//
+// dadosUsuario / buscarDadosUsuario — hoje é stub e só serve para restaurar backup.
+// É também o ponto natural para o Intra empurrar pro app os dados do ADV: a ABERTURA
+// do ADV é sempre feita no Intra (nunca pelo app), que então envia pro app:
+//   numeroADV     <- "Numero ADV" do Intra (ex: 635282) — não existe ainda no app
+//   filial        <- código real da filial, formato "NN-SIGLA" (ex: "21-MOZ"; ver FILIAIS
+//                    em dados-brasil.js, já alinhado com os 38 códigos reais do Intra)
+//   parceiro      <- "Parceiro" do Intra (ex: "37675 - THIAGO PEREIRA VAZ")
+//   valorAbertura <- "Valor" do Intra; substitui o mock ADV_VALOR_ADIANTAMENTO (index.html)
+//   statusIntra   <- vocabulário próprio do Intra ("Aberto/Enviado", "Pen. Aprovação
+//                    Despesa", "Pen. Ordem Fechamento", "Nenhuma Pendência", "Cancelado")
+//                    — hoje o app usa um vocabulário próprio (ADV_STATUS); alinhar os
+//                    dois é uma decisão maior, ainda não feita.
+//
+// sincronizarDespesas — cada despesa enviada deve mapear para as colunas reais da
+// tabela de despesas do Intra:
+//   tipo          -> "Tipo Gasto"      data      -> "Dt Despesa" (dd/mm/aaaa)
+//   justificativa -> "Justificativa"   municipio -> "Municipio"
+//   nf            -> "Nota"            uf        -> "UF"
+//   valor         -> "Valor"
+// Sugestão: enviar também o id gerado pelo app como campo de correlação (ex:
+// idAdvApp), já que o Intra cria seu próprio id no formato "<timestamp>x<numero>" e
+// não tem como saber qual despesa do app corresponde a qual despesa dele sem isso.
+// Os campos de diagnóstico do OCR (chaveAcessoNF, numeroNfDivergente, valorNfDivergente,
+// dataNfDivergente, tipoDespesaDivergenteNF etc.) são só para o app — não existem no
+// Intra e não precisam ser enviados. "Conta Contábil"/"Historico Contábil" também não:
+// são preenchidos pelo financeiro DEPOIS da aprovação, dentro do próprio Intra.
+//
+// autorizarFechamento / confirmarFechamentoADV — consentimentos que o app já registra
+// hoje; ainda não têm campo correspondente confirmado do lado do Intra para bloquear
+// o fechamento sem essa autorização (depende do TI implementar).
+//
+// Pendência observada: nas despesas reais já existentes no Intra, "Justificativa"
+// aparece como null mesmo o app já coletando esse campo — confirmar com a TI se o
+// Intra de fato persiste esse valor quando recebido pela futura API.
+// ═══════════════════════════════════════════════════════════════════════
 
 const API_CONFIG = {
   modo: 'mock', // 'mock' | 'producao'
@@ -103,9 +145,14 @@ const AUTH_API = {
     if (!verificacao.encontrado) {
       throw new Error('Este identificador não está pré-cadastrado na base da Agroquima.');
     }
+    // A filial não é digitada pelo usuário: ela já vem definida no pré-cadastro feito
+    // pela Agroquima (em produção, junto com o restante dos dados vindos do Intra).
+    const preCadastro = (PRE_CADASTRADOS_DEMO || []).find(p =>
+      chaveLimpa(p.identificador) === chaveLimpa(identificador) && p.tipo === tipo
+    );
     const senhaHash = await sha256Hex(senha);
     localStorage.setItem(chaveContaMock(identificador), JSON.stringify({
-      identificador, tipo, senhaHash, ...dadosExtra, criadoEm: new Date().toISOString()
+      identificador, tipo, senhaHash, filial: preCadastro?.filial, ...dadosExtra, criadoEm: new Date().toISOString()
     }));
     return { sucesso: true };
   },
