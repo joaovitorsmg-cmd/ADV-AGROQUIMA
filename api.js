@@ -28,7 +28,8 @@ const API_CONFIG = {
     dadosUsuario: '/usuarios/dados',
     sincronizarDespesas: '/despesas/sincronizar',
     sincronizarAtividades: '/atividades/sincronizar',
-    autorizarFechamento: '/despesas/autorizar-fechamento'
+    autorizarFechamento: '/despesas/autorizar-fechamento',
+    confirmarFechamentoADV: '/despesas/confirmar-fechamento-adv'
   }
 };
 
@@ -174,6 +175,19 @@ const DESPESAS_API = {
       return apiFetch(API_CONFIG.endpoints.autorizarFechamento, {
         method: 'POST',
         body: JSON.stringify({ despesaId, identificador })
+      });
+    }
+    await apiAtraso(400);
+    return { sucesso: true };
+  },
+
+  // Registra a confirmação digital (clique + hash do resumo) do usuário validando
+  // o fechamento do ADV após o administrativo concluir a análise no Intra.
+  async confirmarFechamentoADV(identificador, hashResumo) {
+    if (API_CONFIG.modo === 'producao') {
+      return apiFetch(API_CONFIG.endpoints.confirmarFechamentoADV, {
+        method: 'POST',
+        body: JSON.stringify({ identificador, hashResumo })
       });
     }
     await apiAtraso(400);
