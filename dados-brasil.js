@@ -121,7 +121,7 @@ const CORRELACAO_TIPO_DESPESA = {
   ],
   'Pedágio': [
     'pedágio','praça de pedágio','concessionária de rodovia','tarifa de pedágio',
-    'categoria de veículo','sem parar','conectcar','veloe','antt','artesp','agetop',
+    'categoria de veículo','sem parar','conectcar','veloe','artesp','agetop',
     'ecovias','autopista','comprovante de pedágio'
   ],
   'Ônibus': [
