@@ -657,8 +657,9 @@ body {
         </div>
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn-primario" id="btnStep" onclick="avancarStep()">Continuar</button>
+    <div class="modal-footer" style="display:flex;gap:8px">
+      <button class="btn-secundario" id="btnVoltarStep" onclick="voltarStep()" style="display:none;flex:1">Voltar</button>
+      <button class="btn-primario" id="btnStep" onclick="avancarStep()" style="flex:1">Continuar</button>
     </div>
     <div style="height:12px"></div>
   </div>
@@ -750,8 +751,9 @@ body {
         <input class="form-input" id="fAte" type="tel" oninput="mascaraData(this)" maxlength="10">
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn-primario" onclick="aplicarFiltros()">Filtrar</button>
+    <div class="modal-footer" style="display:flex;gap:8px">
+      <button class="btn-secundario" onclick="limparFiltros()" style="flex:1">Limpar</button>
+      <button class="btn-primario" onclick="aplicarFiltros()" style="flex:1">Filtrar</button>
     </div>
     <div style="height:12px"></div>
   </div>
@@ -785,6 +787,10 @@ body {
       </div>
 
       <div id="paPasso2" style="display:none">
+        <div class="form-group">
+          <label class="form-label">Nome completo</label>
+          <input class="form-input" id="paNome" type="text" placeholder="Seu nome completo">
+        </div>
         <div class="form-group">
           <label class="form-label">Nova senha</label>
           <input class="form-input" id="paSenha1" type="password" placeholder="Mínimo 4 caracteres">
@@ -965,11 +971,13 @@ let ANEXO_EXISTENTE = false;
 let PA_TIPO = 'representante';
 let PA_IDENTIFICADOR_VERIFICADO = null;
 let DESPESA_EDITANDO_ID = null;
+let FILTRO_DESPESAS = { de: '', ate: '' };
 // Status do ADV: 'aberto' (despesas livres) | 'aguardando_aprovacao' (autorizado pelo usuário,
 // bloqueado até o administrativo concluir no Intra) | 'concluido' (aguardando assinatura final
 // do usuário) | 'assinado' (fechamento confirmado e assinado digitalmente).
 let ADV_STATUS = 'aberto';
 let NOTIFICACOES = [];
+let HISTORICO_ADVS = [];
 let POLL_ATUALIZACOES_ADV = null;
 const ADV_VALOR_ADIANTAMENTO = 1000; // mock — em produção vem do registro de abertura do ADV no Intra
 
@@ -1021,6 +1029,7 @@ function carregarDadosUsuario() {
   PENDENTES_SYNC = JSON.parse(localStorage.getItem(chaveDados('pendentes')) || '[]');
   ADV_STATUS = localStorage.getItem(chaveDados('adv_status')) || 'aberto';
   NOTIFICACOES = JSON.parse(localStorage.getItem(chaveDados('notificacoes')) || '[]');
+  HISTORICO_ADVS = JSON.parse(localStorage.getItem(chaveDados('historico_advs')) || '[]');
   popularDados_mockados_se_vazio();
 }
 
@@ -1137,6 +1146,7 @@ function abrirPrimeiroAcesso() {
   document.getElementById('paPasso1').style.display = '';
   document.getElementById('paPasso2').style.display = 'none';
   document.getElementById('paIdentificador').value = '';
+  document.getElementById('paNome').value = '';
   document.getElementById('paSenha1').value = '';
   document.getElementById('paSenha2').value = '';
   esconderErro('paErro1'); esconderErro('paErro2');
@@ -1178,13 +1188,15 @@ async function verificarCadastroPrimeiroAcesso() {
 }
 
 async function criarSenhaPrimeiroAcesso() {
+  const nome = document.getElementById('paNome').value.trim();
   const senha1 = document.getElementById('paSenha1').value;
   const senha2 = document.getElementById('paSenha2').value;
   esconderErro('paErro2');
+  if (!nome) { mostrarErro('paErro2', 'Informe seu nome completo.'); return; }
   if (senha1.length < 4) { mostrarErro('paErro2', 'A senha deve ter ao menos 4 caracteres.'); return; }
   if (senha1 !== senha2) { mostrarErro('paErro2', 'As senhas não coincidem.'); return; }
   try {
-    await AUTH_API.criarSenha(PA_IDENTIFICADOR_VERIFICADO, PA_TIPO, senha1);
+    await AUTH_API.criarSenha(PA_IDENTIFICADOR_VERIFICADO, PA_TIPO, senha1, { nome });
     fecharModal('modalPrimeiroAcesso');
     mostrarToast('✓ Senha criada com sucesso! Faça login para continuar.');
     preencherIdentificadorNoLogin(PA_TIPO, PA_IDENTIFICADOR_VERIFICADO);
@@ -1301,7 +1313,7 @@ function atualizarBannerAdv() {
     banner.innerHTML = `<div class="card" style="padding:14px;font-size:13px;color:var(--texto)"><div style="font-weight:700;margin-bottom:8px">✅ Análise concluída pelo administrativo</div>Revise o resumo do fechamento e confirme com sua assinatura digital.<div class="mt12"><button class="btn-primario" onclick="abrirFinalizacaoADV()">Ver resumo e assinar</button></div></div>`;
   } else if (ADV_STATUS === 'assinado') {
     banner.style.display = '';
-    banner.innerHTML = `<div class="card" style="padding:14px;font-size:13px;color:var(--verde);font-weight:600">✔️ Fechamento deste ADV confirmado e assinado digitalmente.</div>`;
+    banner.innerHTML = `<div class="card" style="padding:14px;font-size:13px;color:var(--verde);font-weight:600">✔️ Fechamento deste ADV confirmado e assinado digitalmente.<div class="mt12"><button class="btn-primario" onclick="iniciarNovoADV()">📂 Iniciar novo ADV</button></div></div>`;
   } else {
     banner.style.display = 'none';
   }
@@ -1798,6 +1810,28 @@ async function assinarFechamentoADV() {
   mostrarToast('✔️ Fechamento do ADV confirmado e assinado digitalmente');
 }
 
+// ─── NOVO CICLO DE ADV (após o fechamento anterior assinado) ───
+// O app modela um único ADV contínuo por usuário — sem isso, depois de assinado um
+// fechamento o usuário ficaria bloqueado para sempre (advBloqueado() nunca mais volta a
+// 'aberto'). O ciclo assinado é arquivado localmente (o PDF baixado na assinatura é o
+// comprovante oficial desse fechamento) e a lista de despesas reinicia vazia para o
+// próximo ADV.
+async function iniciarNovoADV() {
+  if (!confirm('Iniciar um novo ADV?\nO fechamento anterior já está assinado e será arquivado — use o PDF baixado na assinatura como comprovante desse ciclo.')) return;
+  const resumoAnterior = gerarResumoADV();
+  const assinatura = JSON.parse(localStorage.getItem(chaveDados('assinatura_adv')) || 'null');
+  HISTORICO_ADVS.unshift({ ...resumoAnterior, assinatura });
+  localStorage.setItem(chaveDados('historico_advs'), JSON.stringify(HISTORICO_ADVS));
+  for (const d of DESPESAS) await excluirAnexo(d.id).catch(() => {});
+  DESPESAS = [];
+  salvarDespesas();
+  localStorage.removeItem(chaveDados('assinatura_adv'));
+  ADV_STATUS = 'aberto';
+  salvarAdvStatus();
+  renderizarDespesas();
+  mostrarToast('✓ Novo ADV iniciado');
+}
+
 function configurarNav() {
   const tipo = USUARIO?.tipo;
   const navAg = document.getElementById('navAgenda');
@@ -1833,26 +1867,48 @@ function irPara(paginaId) {
 }
 
 // ─── DESPESAS ───
+function despesasFiltradas() {
+  const { de, ate } = FILTRO_DESPESAS;
+  if (!de && !ate) return DESPESAS;
+  const deISO = de ? dataParaISO(de) : null;
+  const ateISO = ate ? dataParaISO(ate) : null;
+  return DESPESAS.filter(d => {
+    const dISO = dataParaISO(d.data);
+    if (!dISO) return false;
+    if (deISO && dISO < deISO) return false;
+    if (ateISO && dISO > ateISO) return false;
+    return true;
+  });
+}
+
 function renderizarDespesas() {
   const lista = document.getElementById('listaDespesas');
   if (!lista) return;
   const wrapAdv = document.getElementById('advFechamentoWrap');
+  const filtroAtivo = !!(FILTRO_DESPESAS.de || FILTRO_DESPESAS.ate);
+  const btnFiltros = document.querySelector('.filtros-btn');
+  if (btnFiltros) btnFiltros.textContent = filtroAtivo ? '⚙ Filtros •' : '⚙ Filtros';
+  const itensVisiveis = despesasFiltradas();
   if (DESPESAS.length === 0) {
     lista.innerHTML = `<div class="empty"><div class="empty-icon">💳</div><div class="empty-titulo">Não possui despesas cadastradas</div><div class="empty-sub">Adicione uma nova despesa</div></div>`;
     if (wrapAdv) wrapAdv.style.display = 'none';
     atualizarBannerAdv();
     return;
   }
-  const meses = {};
-  DESPESAS.forEach(d => {
-    const mes = d.data ? d.data.slice(3) : 'junho 2026';
-    if (!meses[mes]) meses[mes] = [];
-    meses[mes].push(d);
-  });
-  lista.innerHTML = Object.entries(meses).map(([mes, itens]) => `
-    <div style="font-size:13px;color:var(--cinza);margin:8px 0 8px;font-weight:500">${mes}</div>
-    ${itens.map(d => cardDespesa(d)).join('')}
-  `).join('');
+  if (itensVisiveis.length === 0) {
+    lista.innerHTML = `<div class="empty"><div class="empty-icon">🔎</div><div class="empty-titulo">Nenhuma despesa no período filtrado</div><div class="empty-sub"><a href="#" onclick="limparFiltros();return false">Limpar filtro</a></div></div>`;
+  } else {
+    const meses = {};
+    itensVisiveis.forEach(d => {
+      const mes = d.data ? d.data.slice(3) : 'junho 2026';
+      if (!meses[mes]) meses[mes] = [];
+      meses[mes].push(d);
+    });
+    lista.innerHTML = Object.entries(meses).map(([mes, itens]) => `
+      <div style="font-size:13px;color:var(--cinza);margin:8px 0 8px;font-weight:500">${mes}</div>
+      ${itens.map(d => cardDespesa(d)).join('')}
+    `).join('');
+  }
 
   if (wrapAdv) {
     const pendentesAutorizacao = DESPESAS.filter(d => d.status !== 'reprovada' && !d.fechamentoAutorizadoPeloUsuario);
@@ -1860,7 +1916,7 @@ function renderizarDespesas() {
   }
   atualizarBannerAdv();
 
-  // Atualizar saldos
+  // Saldo do ADV reflete sempre o total real consumido, independente do filtro de visualização da lista.
   const consumido = DESPESAS.reduce((s, d) => s + (d.valor || 0), 0);
   document.getElementById('advCons').textContent = 'R$ ' + consumido.toFixed(2).replace('.',',');
   document.getElementById('advDisp').textContent = 'R$ ' + (ADV_VALOR_ADIANTAMENTO - consumido).toFixed(2).replace('.',',');
@@ -1927,6 +1983,12 @@ function toggleMenu(id) {
 document.addEventListener('click', e => {
   if (!e.target.closest('[id^="menu_"]') && e.target.textContent !== '⋯') {
     document.querySelectorAll('[id^="menu_"]').forEach(m => m.style.display = 'none');
+  }
+  // Fecha a lista de sugestões de município ao clicar fora dela — sem isso ela ficava
+  // aberta indefinidamente (só fechava se o usuário clicasse numa sugestão), podendo
+  // sobrepor e bloquear cliques em botões abaixo do campo, como o de avançar/continuar.
+  if (!e.target.closest('.autocomplete-wrapper')) {
+    document.querySelectorAll('.autocomplete-list').forEach(l => l.style.display = 'none');
   }
 });
 
@@ -2064,6 +2126,13 @@ function avancarStep() {
   }
 }
 
+// Permite corrigir dados do Step 1 (ex.: valor/data apontados como divergentes pelo OCR
+// no Step 2) sem perder o anexo já enviado nem precisar recomeçar a despesa do zero.
+function voltarStep() {
+  STEP_ATUAL = 1;
+  atualizarStep();
+}
+
 // O número da nota/cupom/comprovante e o anexo de comprovação são exigidos em
 // QUALQUER despesa — inclusive recibo escrito à mão, que não é documento fiscal mas
 // ainda precisa de um número/identificador e de uma foto/anexo como prova do gasto.
@@ -2091,6 +2160,7 @@ function validarNotaFiscalParaSalvar() {
 function atualizarStep() {
   document.getElementById('stepBody1').style.display = STEP_ATUAL === 1 ? '' : 'none';
   document.getElementById('stepBody2').style.display = STEP_ATUAL === 2 ? '' : 'none';
+  document.getElementById('btnVoltarStep').style.display = STEP_ATUAL === 2 ? '' : 'none';
   document.getElementById('btnStep').textContent = STEP_ATUAL === 1 ? 'Continuar' : (DESPESA_EDITANDO_ID ? 'Salvar alterações' : 'Salvar nova solicitação');
   document.getElementById('step1').className = 'step ' + (STEP_ATUAL === 1 ? 'ativo' : 'completo');
   document.getElementById('step2').className = 'step ' + (STEP_ATUAL === 2 ? 'ativo' : '');
@@ -2535,13 +2605,28 @@ function renderizarStatusOCR(r) {
 
 // ─── FILTROS ───
 function abrirFiltros() {
-  document.getElementById('fDe').value = '';
-  document.getElementById('fAte').value = '';
+  document.getElementById('fDe').value = FILTRO_DESPESAS.de;
+  document.getElementById('fAte').value = FILTRO_DESPESAS.ate;
   document.getElementById('modalFiltros').classList.add('aberto');
 }
 function aplicarFiltros() {
+  const de = document.getElementById('fDe').value.trim();
+  const ate = document.getElementById('fAte').value.trim();
+  if (de && !dataParaISO(de)) { mostrarToast('Data "De" inválida'); return; }
+  if (ate && !dataParaISO(ate)) { mostrarToast('Data "Até" inválida'); return; }
+  if (de && ate && dataParaISO(de) > dataParaISO(ate)) { mostrarToast('A data "De" não pode ser depois da data "Até"'); return; }
+  FILTRO_DESPESAS = { de, ate };
   fecharModal('modalFiltros');
-  mostrarToast('Filtro aplicado');
+  renderizarDespesas();
+  mostrarToast(de || ate ? 'Filtro aplicado' : 'Filtro removido');
+}
+function limparFiltros() {
+  FILTRO_DESPESAS = { de: '', ate: '' };
+  document.getElementById('fDe').value = '';
+  document.getElementById('fAte').value = '';
+  fecharModal('modalFiltros');
+  renderizarDespesas();
+  mostrarToast('Filtro removido');
 }
 
 // ─── UTILS ───
