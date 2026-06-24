@@ -186,6 +186,45 @@ function extrairDataEmissao(texto) {
   return null;
 }
 
+// ─── MUNICÍPIO/UF DO EMITENTE (NF-e/DANFE) ───
+// O rótulo "MUNICÍPIO" de um DANFE normalmente pertence ao bloco do DESTINATÁRIO
+// (a própria Agroquima), não ao emitente (o estabelecimento onde a despesa de fato
+// ocorreu) — usar o primeiro "MUNICÍPIO" encontrado no documento compararia a cidade
+// digitada contra a cidade da Agroquima, não contra a do posto/restaurante/hotel etc.
+// Por isso a extração é restrita ao texto entre "IDENTIFICAÇÃO DO EMITENTE" e o
+// próximo bloco do documento, e a cidade só é aceita se bater (sem acento/caixa) com
+// algum município de MUNICIPIOS (dados-brasil.js) na UF encontrada. Documentos sem
+// esse rótulo (cupom fiscal/NFC-e, NFS-e, pedágio, recibo manual) ou onde a cidade não
+// é reconhecida com confiança não geram divergência — é melhor não alertar do que
+// comparar contra a cidade errada.
+function extrairMunicipioEmitente(textoOriginal) {
+  const rotuloEmitente = /identifica[cç][aã]o do emitente/i.exec(textoOriginal);
+  if (!rotuloEmitente) return null;
+  const aposRotulo = textoOriginal.slice(rotuloEmitente.index + rotuloEmitente[0].length);
+  const fimBloco = aposRotulo.search(/\bdanfe\b|chave de acesso|natureza da opera[cç][aã]o|protocolo de autoriza[cç][aã]o|destinat[aá]rio/i);
+  const janela = normalizarTextoOCR(fimBloco === -1 ? aposRotulo.slice(0, 400) : aposRotulo.slice(0, fimBloco));
+
+  const ufsValidas = (typeof ESTADOS !== 'undefined') ? ESTADOS.map(e => e.uf.toLowerCase()) : [];
+  const municipiosPorUF = (typeof MUNICIPIOS !== 'undefined') ? MUNICIPIOS : {};
+  const buscarOficial = (uf, cidadeNormalizada) =>
+    (municipiosPorUF[uf.toUpperCase()] || []).find(c => normalizarTextoOCR(c) === cidadeNormalizada);
+
+  const rotulado = janela.match(/munic[ií]pio\s*[:\-]?\s*([a-z\s]+?)\s+uf\s*[:\-]?\s*([a-z]{2})\b/);
+  if (rotulado && ufsValidas.includes(rotulado[2])) {
+    const oficial = buscarOficial(rotulado[2], rotulado[1].trim());
+    if (oficial) return { municipio: oficial, uf: rotulado[2].toUpperCase() };
+  }
+
+  const regexCidadeUF = /([a-z]+(?:\s+[a-z]+){0,4})\s*[-\/]\s*([a-z]{2})\b/g;
+  let m;
+  while ((m = regexCidadeUF.exec(janela))) {
+    if (!ufsValidas.includes(m[2])) continue;
+    const oficial = buscarOficial(m[2], m[1].trim());
+    if (oficial) return { municipio: oficial, uf: m[2].toUpperCase() };
+  }
+  return null;
+}
+
 // Extrai os dados objetivos do documento (não depende do que o usuário digitou).
 function extrairDadosNota(textoOriginal) {
   const texto = normalizarTextoOCR(textoOriginal);
@@ -196,6 +235,7 @@ function extrairDadosNota(textoOriginal) {
   const valorDetectado = extrairValorTotal(texto);
   const dataDetectada = extrairDataEmissao(texto);
   const tipoDocumento = detectarTipoDocumento(texto);
+  const emitente = extrairMunicipioEmitente(textoOriginal);
 
   const listaProibidos = (typeof ITENS_PROIBIDOS !== 'undefined' ? ITENS_PROIBIDOS : ['cerveja', 'cigarro'])
     .map(normalizarTextoOCR);
@@ -205,7 +245,11 @@ function extrairDadosNota(textoOriginal) {
   // 3 tipos de documento fiscal aceitos — não há base para validar a despesa.
   const leituraInsuficiente = !chaveAcesso && !numeroDetectado && tipoDocumento === 'desconhecido' && texto.trim().length < 25;
 
-  return { textoExtraido: textoOriginal, tipoDocumento, chaveAcesso, numeroDetectado, valorDetectado, dataDetectada, itensDetectados, leituraInsuficiente };
+  return {
+    textoExtraido: textoOriginal, tipoDocumento, chaveAcesso, numeroDetectado, valorDetectado, dataDetectada,
+    municipioDetectado: emitente ? emitente.municipio : null, ufDetectado: emitente ? emitente.uf : null,
+    itensDetectados, leituraInsuficiente
+  };
 }
 
 // Compara os dados objetivos da nota com o que o usuário digitou no formulário.
@@ -218,9 +262,14 @@ function compararNotaComFormulario(dados, entrada) {
     Math.abs(entrada.valor - dados.valorDetectado) > 0.01);
   const dataDivergente = !!(entrada.data && dados.dataDetectada &&
     entrada.data !== dados.dataDetectada);
+  // Só compara município/UF quando a extração do emitente teve confirmação contra a
+  // lista oficial de municípios (ver extrairMunicipioEmitente) — sem isso, não há
+  // divergência (nunca bloqueia o lançamento, só alerta quando há confiança nos dois lados).
+  const municipioDivergente = !!(entrada.uf && entrada.municipio && dados.ufDetectado && dados.municipioDetectado &&
+    (entrada.uf.toUpperCase() !== dados.ufDetectado || normalizarTextoOCR(entrada.municipio) !== normalizarTextoOCR(dados.municipioDetectado)));
   const { tipoDivergente, tipoTermoConflitante, tipoSugerido } =
     verificarCorrelacaoTipoDespesa(entrada.tipo, normalizarTextoOCR(dados.textoExtraido));
-  return { ...dados, numeroDivergente, valorDivergente, dataDivergente, tipoDivergente, tipoTermoConflitante, tipoSugerido };
+  return { ...dados, numeroDivergente, valorDivergente, dataDivergente, municipioDivergente, tipoDivergente, tipoTermoConflitante, tipoSugerido };
 }
 
 async function analisarNotaFiscal(file, entrada) {
