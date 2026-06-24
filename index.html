@@ -629,7 +629,7 @@ body {
         <div class="form-group">
           <label class="form-label">Município *</label>
           <div class="autocomplete-wrapper">
-            <input class="form-input autocomplete-input" id="dMunicipio" placeholder="Digite ou selecione a cidade" oninput="filtrarCidades(this.value)" autocomplete="off">
+            <input class="form-input autocomplete-input" id="dMunicipio" placeholder="Digite ou selecione a cidade" oninput="filtrarCidades(this.value); reavaliarOCR()" autocomplete="off">
             <div class="autocomplete-list" id="cidadesList" style="display:none"></div>
           </div>
         </div>
@@ -2201,11 +2201,14 @@ async function abrirEditarDespesa(id) {
       valorDetectado: d.valorDetectadoNF ?? null,
       dataDetectada: d.dataDetectadaNF || null,
       tipoDocumento: d.tipoDocumentoNF || null,
+      municipioDetectado: d.municipioDetectadoNF || null,
+      ufDetectado: d.ufDetectadoNF || null,
       itensDetectados: d.itensProibidosDetectados || [],
       leituraInsuficiente: !!d.leituraOcrInsuficiente,
       numeroDivergente: !!d.numeroNfDivergente,
       valorDivergente: !!d.valorNfDivergente,
       dataDivergente: !!d.dataNfDivergente,
+      municipioDivergente: !!d.municipioNfDivergente,
       tipoDivergente: !!d.tipoDespesaDivergenteNF,
       tipoTermoConflitante: d.tipoDespesaTermoConflitanteNF || null,
       tipoSugerido: d.tipoDespesaSugeridoNF || null
@@ -2233,11 +2236,14 @@ async function salvarDespesa() {
     valorDetectadoNF: ocr?.valorDetectado ?? null,
     dataDetectadaNF: ocr?.dataDetectada || null,
     tipoDocumentoNF: ocr?.tipoDocumento || null,
+    municipioDetectadoNF: ocr?.municipioDetectado || null,
+    ufDetectadoNF: ocr?.ufDetectado || null,
     itensProibidosDetectados: ocr?.itensDetectados || [],
     leituraOcrInsuficiente: !!ocr?.leituraInsuficiente,
     numeroNfDivergente: !!ocr?.numeroDivergente,
     valorNfDivergente: !!ocr?.valorDivergente,
     dataNfDivergente: !!ocr?.dataDivergente,
+    municipioNfDivergente: !!ocr?.municipioDivergente,
     tipoDespesaDivergenteNF: !!ocr?.tipoDivergente,
     tipoDespesaTermoConflitanteNF: ocr?.tipoTermoConflitante || null,
     tipoDespesaSugeridoNF: ocr?.tipoSugerido || null
@@ -2449,6 +2455,7 @@ function atualizarCidades() {
   document.getElementById('dMunicipio').value = '';
   document.getElementById('cidadesList').style.display = 'none';
   if (uf) document.getElementById('dMunicipio').placeholder = 'Digite ou selecione a cidade';
+  reavaliarOCR();
 }
 
 function atualizarCidadesAtividade() {
@@ -2488,6 +2495,7 @@ function filtrarCidadesAtividade(q) {
 function selecionarCidade(cidade, inputId, listaId) {
   document.getElementById(inputId).value = cidade;
   document.getElementById(listaId).style.display = 'none';
+  if (inputId === 'dMunicipio') reavaliarOCR();
 }
 
 // ─── MÁSCARAS ───
@@ -2553,7 +2561,9 @@ function entradaFormularioAtual() {
     numero: document.getElementById('dNF').value,
     valor: parseFloat((document.getElementById('dValor').value || '0').replace(',', '.')),
     data: document.getElementById('dData').value,
-    tipo: document.getElementById('dTipo').value
+    tipo: document.getElementById('dTipo').value,
+    uf: document.getElementById('dUF').value,
+    municipio: document.getElementById('dMunicipio').value
   };
 }
 
@@ -2598,6 +2608,7 @@ function renderizarStatusOCR(r) {
     if (r.numeroDivergente) alertas.push({ msg: `O número da nota digitado não corresponde ao identificado no documento (nº ${r.numeroDetectado}).`, ok: notaManual });
     if (r.valorDivergente) alertas.push({ msg: `O valor digitado não corresponde ao identificado no documento (R$ ${r.valorDetectado.toFixed(2).replace('.', ',')}).`, ok: notaManual });
     if (r.dataDivergente) alertas.push({ msg: `A data digitada não corresponde à data de emissão identificada no documento (${r.dataDetectada}).`, ok: notaManual });
+    if (r.municipioDivergente) alertas.push({ msg: `O município/UF digitado não corresponde ao identificado no documento (${r.municipioDetectado} - ${r.ufDetectado}). A despesa será aceita, mas marcada para revisão.`, ok: false });
     if (!alertas.length) alertas.push({ msg: 'Nota lida sem alertas.', ok: true });
   }
   status.innerHTML = alertas.map(a => `<div style="font-size:11px;font-weight:600;border-radius:var(--radius-sm);padding:6px 10px;margin-top:6px;background:${a.ok?'#DCFCE7':'#FEF3C7'};color:${a.ok?'#14532D':'#92400E'}">${a.ok?'✓':'⚠️'} ${a.msg}</div>`).join('');
