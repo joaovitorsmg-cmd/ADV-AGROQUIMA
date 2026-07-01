@@ -214,5 +214,6 @@ const PRE_CADASTRADOS_DEMO = [
   { tipo: 'clt', identificador: 'luciana.ramos@agroquima.com.br', filial: '18-ADM', senhaDefault: 'Jv.852456' },
   { tipo: 'clt', identificador: 'gabriela.amorim@agroquima.com.br', filial: '18-ADM', senhaDefault: 'Jv.852456' },
   { tipo: 'clt', identificador: 'guilherme.carvalho@agroquima.com.br', filial: '3-ARG', senhaDefault: 'Jv.852456' },
+  { tipo: 'clt', identificador: 'carlos.poggian@agroquima.com.br', filial: '3-ARG', senhaDefault: 'Jv.852456' },
   { tipo: 'clt', identificador: 'patrick.lima@agroquima.com.br', filial: '10-MAR', senhaDefault: 'Jv.852456' }
 ];
