@@ -1034,12 +1034,7 @@ function carregarDadosUsuario() {
 }
 
 function popularDados_mockados_se_vazio() {
-  if (DESPESAS.length === 0) {
-    DESPESAS = [
-      { id: gerarId(), nf: '170', tipo: 'Refeição', valor: 15, data: '23/06/2026', uf: 'GO', municipio: 'Catalão', status: 'analise', sync: true },
-    ];
-    salvarDespesas();
-  }
+  // Sem despesas pré-carregadas: ADV começa com saldo total disponível (R$ 1.000,00)
 }
 
 // ─── LOGIN ───

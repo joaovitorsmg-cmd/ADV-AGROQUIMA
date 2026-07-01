@@ -96,6 +96,7 @@ const FILIAIS = [
   {id:'14-RED',nome:'Redenção - PA (14-RED)'},
   {id:'16-IMP',nome:'Imperatriz - MA (16-IMP)'},
   {id:'17-BAR',nome:'Barra do Garças - MT (17-BAR)'},
+  {id:'18-ADM',nome:'ADM (18-ADM)'},
   {id:'19-PAL',nome:'Palmas - TO (19-PAL)'},
   {id:'21-MOZ',nome:'Mozarlândia - GO (21-MOZ)'},
   {id:'22-PGM',nome:'Paragominas - PA (22-PGM)'},
@@ -205,5 +206,13 @@ const PRE_CADASTRADOS_DEMO = [
   { tipo: 'representante', identificador: '00000000000100', filial: '21-MOZ', senhaDefault: 'Jv.852456' },
   { tipo: 'estagiario', identificador: '00000000000', filial: '4-RVD', senhaDefault: 'Jv.852456' },
   { tipo: 'clt', identificador: 'joao.mendes@agroquima.com.br', filial: '1-MTZ', senhaDefault: 'Jv.852456' },
-  { tipo: 'clt', identificador: 'gerente.rv@agroquima.com.br', filial: '4-RVD', senhaDefault: 'Jv.852456' }
+  { tipo: 'clt', identificador: 'gerente.rv@agroquima.com.br', filial: '4-RVD', senhaDefault: 'Jv.852456' },
+  { tipo: 'clt', identificador: 'fernando.coelho@agroquima.com.br', filial: '1-MTZ', senhaDefault: 'Jv.852456' },
+  { tipo: 'clt', identificador: 'marcelio@agroquima.com.br', filial: '1-MTZ', senhaDefault: 'Jv.852456' },
+  { tipo: 'clt', identificador: 'fabio.ribeiro@agroquima.com.br', filial: '1-MTZ', senhaDefault: 'Jv.852456' },
+  { tipo: 'clt', identificador: 'fabio.moreira@agroquima.com.br', filial: '1-MTZ', senhaDefault: 'Jv.852456' },
+  { tipo: 'clt', identificador: 'luciana.ramos@agroquima.com.br', filial: '18-ADM', senhaDefault: 'Jv.852456' },
+  { tipo: 'clt', identificador: 'gabriela.amorim@agroquima.com.br', filial: '18-ADM', senhaDefault: 'Jv.852456' },
+  { tipo: 'clt', identificador: 'guilherme.carvalho@agroquima.com.br', filial: '3-ARG', senhaDefault: 'Jv.852456' },
+  { tipo: 'clt', identificador: 'patrick.lima@agroquima.com.br', filial: '10-MAR', senhaDefault: 'Jv.852456' }
 ];
