@@ -200,10 +200,18 @@ const AUTH_API = {
     }
     await apiAtraso(400);
     const conta = JSON.parse(localStorage.getItem(chaveContaMock(identificador)) || 'null');
-    if (!conta) throw new Error('Conta não encontrada. Faça o primeiro acesso para criar sua senha.');
     const senhaHash = await sha256Hex(senha);
-    if (senhaHash !== conta.senhaHash) throw new Error('Senha incorreta.');
-    return { sucesso: true, perfil: conta };
+    if (conta) {
+      if (senhaHash !== conta.senhaHash) throw new Error('Senha incorreta.');
+      return { sucesso: true, perfil: conta };
+    }
+    // Sem conta no localStorage: aceita a senha padrão do pré-cadastro (evita refazer Primeiro Acesso)
+    const preCadastro = (PRE_CADASTRADOS_DEMO || []).find(p =>
+      chaveLimpa(p.identificador) === chaveLimpa(identificador) && p.tipo === tipo
+    );
+    if (!preCadastro?.senhaDefault) throw new Error('Conta não encontrada. Faça o primeiro acesso para criar sua senha.');
+    if (senhaHash !== await sha256Hex(preCadastro.senhaDefault)) throw new Error('Senha incorreta.');
+    return { sucesso: true, perfil: { identificador, tipo, filial: preCadastro.filial } };
   },
 
   async alterarSenha(identificador, senhaAtual, novaSenha) {
