@@ -1025,6 +1025,10 @@ function init() {
 
 function carregarDadosUsuario() {
   DESPESAS = JSON.parse(localStorage.getItem(chaveDados('despesas')) || '[]');
+  // Remove a despesa de exemplo (NF 170, R$15) que era pré-carregada nas versões anteriores
+  const antesLimpeza = DESPESAS.length;
+  DESPESAS = DESPESAS.filter(d => !(d.nf === '170' && d.valor === 15 && d.data === '23/06/2026' && d.sync === true));
+  if (DESPESAS.length !== antesLimpeza) salvarDespesas();
   ATIVIDADES = JSON.parse(localStorage.getItem(chaveDados('atividades')) || '[]');
   PENDENTES_SYNC = JSON.parse(localStorage.getItem(chaveDados('pendentes')) || '[]');
   ADV_STATUS = localStorage.getItem(chaveDados('adv_status')) || 'aberto';
