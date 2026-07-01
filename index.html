@@ -427,11 +427,11 @@ body {
       <div class="hero-cards">
         <div class="hero-card">
           <div class="hero-card-label"><span class="dot dot-verde"></span> Disponível</div>
-          <div class="hero-card-valor" id="advDisp">R$ 985,00</div>
+          <div class="hero-card-valor" id="advDisp">R$ 1.000,00</div>
         </div>
         <div class="hero-card">
           <div class="hero-card-label"><span class="dot dot-vermelho"></span> Consumido</div>
-          <div class="hero-card-valor" id="advCons">R$ 15,00</div>
+          <div class="hero-card-valor" id="advCons">R$ 0,00</div>
         </div>
       </div>
     </div>
@@ -1892,6 +1892,8 @@ function renderizarDespesas() {
     lista.innerHTML = `<div class="empty"><div class="empty-icon">💳</div><div class="empty-titulo">Não possui despesas cadastradas</div><div class="empty-sub">Adicione uma nova despesa</div></div>`;
     if (wrapAdv) wrapAdv.style.display = 'none';
     atualizarBannerAdv();
+    document.getElementById('advCons').textContent = 'R$ 0,00';
+    document.getElementById('advDisp').textContent = 'R$ ' + ADV_VALOR_ADIANTAMENTO.toFixed(2).replace('.', ',');
     return;
   }
   if (itensVisiveis.length === 0) {
