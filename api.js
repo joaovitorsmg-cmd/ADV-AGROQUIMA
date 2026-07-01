@@ -159,11 +159,14 @@ const AUTH_API = {
     }
     await apiAtraso(500);
     const limpo = chaveLimpa(identificador);
-    const preCadastrado = (PRE_CADASTRADOS_DEMO || []).some(p =>
+    const preCadastro = (PRE_CADASTRADOS_DEMO || []).find(p =>
       chaveLimpa(p.identificador) === limpo && p.tipo === tipo
     );
-    const jaTemSenha = !!localStorage.getItem(chaveContaMock(identificador));
-    return { encontrado: preCadastrado || jaTemSenha, jaTemSenha };
+    const preCadastrado = !!preCadastro;
+    const jaTemSenhaLocal = !!localStorage.getItem(chaveContaMock(identificador));
+    // Usuários demo com senhaDefault sempre podem refazer o Primeiro Acesso (reset de senha)
+    const jaTemSenha = jaTemSenhaLocal && !preCadastro?.senhaDefault;
+    return { encontrado: preCadastrado || jaTemSenhaLocal, jaTemSenha };
   },
 
   // Cria a senha/PIN escolhida pelo usuário no primeiro acesso (exige cadastro prévio).
@@ -201,17 +204,17 @@ const AUTH_API = {
     await apiAtraso(400);
     const conta = JSON.parse(localStorage.getItem(chaveContaMock(identificador)) || 'null');
     const senhaHash = await sha256Hex(senha);
-    if (conta) {
-      if (senhaHash !== conta.senhaHash) throw new Error('Senha incorreta.');
-      return { sucesso: true, perfil: conta };
-    }
-    // Sem conta no localStorage: aceita a senha padrão do pré-cadastro (evita refazer Primeiro Acesso)
+    // Senha customizada (localStorage) tem prioridade, mas se não bater tenta a senhaDefault —
+    // assim o reset funciona mesmo sem precisar limpar o localStorage manualmente.
+    if (conta && senhaHash === conta.senhaHash) return { sucesso: true, perfil: conta };
     const preCadastro = (PRE_CADASTRADOS_DEMO || []).find(p =>
       chaveLimpa(p.identificador) === chaveLimpa(identificador) && p.tipo === tipo
     );
-    if (!preCadastro?.senhaDefault) throw new Error('Conta não encontrada. Faça o primeiro acesso para criar sua senha.');
-    if (senhaHash !== await sha256Hex(preCadastro.senhaDefault)) throw new Error('Senha incorreta.');
-    return { sucesso: true, perfil: { identificador, tipo, filial: preCadastro.filial } };
+    if (preCadastro?.senhaDefault && senhaHash === await sha256Hex(preCadastro.senhaDefault)) {
+      return { sucesso: true, perfil: conta || { identificador, tipo, filial: preCadastro.filial } };
+    }
+    if (!conta) throw new Error('Conta não encontrada. Faça o primeiro acesso para criar sua senha.');
+    throw new Error('Senha incorreta.');
   },
 
   async alterarSenha(identificador, senhaAtual, novaSenha) {
