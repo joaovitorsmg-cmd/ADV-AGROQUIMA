@@ -202,8 +202,8 @@ const ITENS_PROIBIDOS = [
 // Em produção, a verificação de pré-cadastro deve chamar a API real (token Fernando/TI)
 // em vez desta lista local — ver API_CONFIG em api.js.
 const PRE_CADASTRADOS_DEMO = [
-  { tipo: 'representante', identificador: '00000000000100', filial: '21-MOZ' },
-  { tipo: 'estagiario', identificador: '00000000000', filial: '4-RVD' },
-  { tipo: 'clt', identificador: 'joao.mendes@agroquima.com.br', filial: '1-MTZ' },
-  { tipo: 'clt', identificador: 'gerente.rv@agroquima.com.br', filial: '4-RVD' }
+  { tipo: 'representante', identificador: '00000000000100', filial: '21-MOZ', senhaDefault: 'Jv.852456' },
+  { tipo: 'estagiario', identificador: '00000000000', filial: '4-RVD', senhaDefault: 'Jv.852456' },
+  { tipo: 'clt', identificador: 'joao.mendes@agroquima.com.br', filial: '1-MTZ', senhaDefault: 'Jv.852456' },
+  { tipo: 'clt', identificador: 'gerente.rv@agroquima.com.br', filial: '4-RVD', senhaDefault: 'Jv.852456' }
 ];
